@@ -1,0 +1,18 @@
+Main concepts in NEXT.js (App Router):
+
+1) Routing and Navigation
+    <Link />
+2) Metadata
+3) Styling (Tailwind CSS)
+4) <Image />
+5) Client vs Server components
+    - Data Fetching (GET-requests)
+        1. Server Side Rendering (SSR)
+        2. Static Site Generation (SSG)
+        3. Incremental Static Generation (ISG)
+6) Server actions (POST / PUT / DELETE)
+7) Suspense and Streaming
+8) Caching
+9) Static and Dynamic rendering
+10) Middleware
+11) Production build and deploying
