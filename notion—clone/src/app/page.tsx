@@ -6,10 +6,16 @@
     => In-Case if we want to turn the Default SERVER SIDE COMPONENT RENDERING into the CLIENT SIDE, we need to add the "use client" directive to the top of the page.
 */
 
+import { Button } from "@/components/ui/button";
+
+// "Home" component is passed as "children" to "RootLayout"
+// "RootLayout" passes "Home" as "children" to "ClientLayout"
+// "ClientLayout" renders... the "Header" at the top and the content of "Home" below it.
 export default function Home() {
     return (
-        <main>
-            
+        <main className="">
+            <h1>Let's build an API Productivity app</h1>
+            <Button>Click Me</Button>
         </main>
     );
 }

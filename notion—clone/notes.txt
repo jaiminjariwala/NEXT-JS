@@ -16,3 +16,12 @@ Main concepts in NEXT.js (App Router):
 9) Static and Dynamic rendering
 10) Middleware
 11) Production build and deploying
+
+
+Things used to build this "notion-clone" project:
+
+1) shadcn: A UI component library built on top of REACT an TAILWIND—CSS. It provides a collection of pre-built, accessible, and customizable components that can significantly streamline the process of building modern web applications. Link: (https://ui.shadcn.com/docs/installation/next)
+
+2) app/ is the directory for routes
+3) components/ is the directory for resuable components
+4) public/ is for the static assets
