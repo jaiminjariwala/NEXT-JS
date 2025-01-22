@@ -15,6 +15,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import ClientLayout from "@/components/ClientLayout";
+import Sidebar from "@/components/Sidebar";
 
 // Provide metadata for SEO and browser display, such as the title & description
 export const metadata: Metadata = {
@@ -32,9 +33,18 @@ export default function RootLayout({
         <ClerkProvider>
             <html lang="en">
                 <body>
-                    {/*  */}
                     <ClientLayout>  {/* Renders ClientLayout Component (viz. a client component, so it will render on the client side!) */}
-                        {children}
+
+                        <div className="flex min-h-screen">
+                            <Sidebar />
+
+
+                            {/* flex-1: means use up all the space */}
+                            <div className="flex-1 p-4 bg-gray-100 overflow-y-auto scroll">
+                                {children}  {/* page.tsx component content */}
+                            </div>
+                        </div>
+
                     </ClientLayout>
                 </body>
             </html>
