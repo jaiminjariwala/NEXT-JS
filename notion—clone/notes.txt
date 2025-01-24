@@ -19,9 +19,15 @@ Main concepts in NEXT.js (App Router):
 
 
 Things used to build this "notion-clone" project:
-
 1) shadcn: A UI component library built on top of REACT an TAILWIND—CSS. It provides a collection of pre-built, accessible, and customizable components that can significantly streamline the process of building modern web applications. Link: (https://ui.shadcn.com/docs/installation/next)
 
-2) app/ is the directory for routes
-3) components/ is the directory for resuable components
-4) public/ is for the static assets
+2) clerk: A user management and authentication platform for web development.
+3) firebase: A product of Google, which helps developers to build, manage and grow their apps in a more faster & secure way. It uses NoSQL for the database for the storage of data. 
+=> In order to connect "firestore database" to our application, go to project settings, create a web-app, give the name and register the app. The create a "firebase.ts" file in your vscode proejct folder. Using "npm i firebase" install firebase.
+=> Later create "firebase-admin.ts" file under the project structure and not inside any other sub-folder. Type in the following command in terminal "npm i firebase-admin". Create a "service key"   in firebase web-app, by going into "Service accounts"
+
+
+About Project:
+1) app/ is the directory for routes
+2) components/ is the directory for resuable components
+3) public/ is for the static assets
