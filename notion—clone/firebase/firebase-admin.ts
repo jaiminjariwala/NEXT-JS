@@ -22,33 +22,26 @@
     6. getFirestore: Retrieves the Firestore instance associated with the initialized Firebase Admin app, allowing us to interact with Firestore.
 */
 
-import {
-    initializeApp,
-    getApps,
-    App,
-    getApp,
-    cert,
-} from "firebase-admin/app"
+import { initializeApp, getApps, App, getApp, cert, ServiceAccount } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 
-import { getFirestore } from "firebase-admin/firestore"
-
-// below code imports the "Service Account JSON File". The file contains credentials required to authenticate with Firebase Services
-const serviceKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-
-// Parse the JSON string
-const serviceKeyParsed = JSON.parse(serviceKey || '{}')
+// The file contains credentials required to authenticate with Firebase Services
+// Create a fully typed ServiceAccount object
+const serviceKey: ServiceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID || '',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+}
 
 // Firebase app initialization
 let app: App
-
 if (getApps().length === 0) {
     app = initializeApp({
-        credential: cert(serviceKeyParsed)
+        credential: cert(serviceKey)
     })
 } else {
     app = getApp()
 }
 
-const adminDb = getFirestore(app)   
-
-export {app as adminApp, adminDb}
+const adminDb = getFirestore(app);
+export { app as adminApp, adminDb };
