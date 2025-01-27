@@ -1,3 +1,4 @@
+// Server-Side Firebase Admin
 /* 
     The following scripts sets up Firebase Admin in a Node.js environment.
     

@@ -1,19 +1,30 @@
-/* This file contains a server action to handle the creation of new documents for authenticated users. */
+/* This file contains a server action to handle the actual logic of creating the new documents for authenticated users in Firestore. */
 
 "use server"; // it's a directive indicates that this file will run on the server
 
-import { adminDb } from "../firebase/firebase-admin"; // allows access to the dB for performing server side operations.
-import { auth } from "@clerk/nextjs/server"; // for user authentication & redirects unauthenticated users to the sign-in page
-import { redirect } from "next/navigation"; // nextjs function useful when a user needs to be navigated to another page.
+// adminDb: Firestore admin instance for server-side database operations.
+import { adminDb } from "../firebase/firebase-admin"; 
 
-// below function creates a new document & handles 1. Authentication 2. Firestore Document Creation 3. Nested user-specific metadata creation.
+// "auth" function: Retrieves user authentication data from Clerk.
+import { auth } from "@clerk/nextjs/server";
+
+// "redirect" function: Redirects unauthenticated users to the sign-in page.
+import { redirect } from "next/navigation";
+
+
 export async function createNewDocument() {
-  // if the user tries to "Create a New Document without Login/Sign-Up that is authenticate", the below code will thow the user to the CLERK Login screen!
-
+  /*
+    this function creates a new document & handles
+    1. Authentication
+    2. Firestore Document Creation
+    3. Nested user-specific metadata creation.
+  */
+  
   // "auth()" function retrieves authentication details about current user. If the user isn't authenticated, the returned SessionClaims will be empty or undefined.
   const { sessionClaims } = await auth();
 
-  // check if user is authenticated by extracting the email, if not, redirect to sign-in page
+  // if the user tries to "Create a New Document without Login/Sign-Up that is authenticate", the below code will throw the user to the CLERK Login screen!
+  // check if user is authenticated by extracting the email, if not, redirect the user to the sign-in page
   if (!sessionClaims?.email) {
     redirect("/sign-in");
   }
