@@ -5,7 +5,7 @@ export default function ProductDetailsLayout({
 }) {
   return (
     <>
-      {children}  {/* In this case the children prop corresponds to the [productId]'s -> page.tsx */}
+      {children}  {/* In this case the children prop corresponds to the [productId]'s folder content -> page.tsx */}
       <h2>Featured products</h2>
       {/* Carousel here! */}
     </>

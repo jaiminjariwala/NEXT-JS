@@ -1,3 +1,6 @@
+// every layout component needs a "children" prop, this is where your page content will go!
+// In this case, the "children" will be either "login/page.tsx" or "register/page.tsx"
+
 export default function AuthLayout({
   children,
 }: {
