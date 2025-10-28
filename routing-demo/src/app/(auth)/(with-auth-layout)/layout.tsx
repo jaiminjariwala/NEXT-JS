@@ -1,8 +1,18 @@
 "use client";
 
-import "./styles.css"
+import "./styles.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react"; // introduction to "templates" using useState hook
+
+// A layout stays the same between pages (does not re-render).
+// A template looks similar, but it re-renders every time you navigate to a new child route.
+// Like layouts, templates need to accept a children prop to render the nested route segments
+// whenever a user navigates between routes sharing a template, you get a completely fresh start!
+// - a new template component instance is mounted
+// - DOM elements are recreated
+// - state is cleared
+// - effects are re-synchronized
 
 const navLinks = [
   { name: "Register", href: "/register" },
@@ -18,17 +28,25 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [input, setInput] = useState("")
   const pathname = usePathname();
   return (
     <div>
+      <div>
+        {/* the input value will stay and not reset because the layout does not re-render when switching between its child pages.*/}
+        {/* but if you rename this layout.tsx file to template.tsx then after navigating to different child routes, everything will be cleared and reset! */}
+        <input value={input} onChange={(e) => setInput(e.target.value)}/> 
+      </div>
       {navLinks.map((link) => {
         const isActive =
           pathname === link.href ||
           (pathname.startsWith(link.href) && link.href !== "/");
         return (
           <Link
-            className = {isActive ? "font-bold mr-4" : "text-blue-500 mr-4"}
-            href={link.href} key={link.name}>
+            className={isActive ? "font-bold mr-4" : "text-blue-500 mr-4"}
+            href={link.href}
+            key={link.name}
+          >
             {link.name}
           </Link>
         );
