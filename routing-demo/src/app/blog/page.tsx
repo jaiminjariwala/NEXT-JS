@@ -6,6 +6,11 @@ export const metadata: Metadata = {
     absolute: "Hello, this is my BLOG", // absolute property completely overrides any parent layout title or template.
   }
 };
-export default function Blog() {
+export default async function Blog() {
+  await new Promise((resolve) => {
+    setTimeout(() => {
+      resolve("intentional delay")
+    }, 2000)
+  }) // resolves after 2 seconds
   return <h1>My Blog</h1>;
 }
