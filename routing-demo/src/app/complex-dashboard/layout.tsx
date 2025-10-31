@@ -7,19 +7,29 @@
 // each defined slot automatically becomes a prop in its corresponding `layout.tsx` file
 
 export default function ComplexDashboardLayout({
-  // the layout will also render the component from adjacent page.tsx as children prop
-  children, // children is the content from complex-dashboard/page.tsx
-  users,  // users is the content from complex-dashboard/@notifcations/page.tsx
-  revenue,  // revenue is the content from complex-dashboard/@revenue/page.tsx
-  notifications,  // notifications is the content from complex-dashboard/@notifications/page.tsx
-  // NEXT JS automatically injects those props based on folder names.
-}: {
+  children,
+  login,
+  users,
+  revenue,
+  notifications,
+}: // the layout will also render the component from adjacent page.tsx as children prop
+
+// children is the content from complex-dashboard/page.tsx
+// login is the content from complex-dashboard/@login/page.tsx
+// users is the content from complex-dashboard/@notifcations/page.tsx
+// revenue is the content from complex-dashboard/@revenue/page.tsx
+// notifications is the content from complex-dashboard/@notifications/page.tsx
+
+// NEXT JS automatically injects those props based on folder names.
+{
+  login: React.ReactNode;
   children: React.ReactNode;
   users: React.ReactNode;
   revenue: React.ReactNode;
   notifications: React.ReactNode;
 }) {
-  return (
+  const isLoggedIn = false; // in real-application we will use useAuth to get the authentication status
+  return isLoggedIn ? (
     <div>
       <div>{children}</div>
       <div style={{ display: "flex" }}>
@@ -30,5 +40,7 @@ export default function ComplexDashboardLayout({
         <div style={{ display: "flex", flex: 1 }}>{notifications}</div>
       </div>
     </div>
+  ) : (
+    login
   );
 }
