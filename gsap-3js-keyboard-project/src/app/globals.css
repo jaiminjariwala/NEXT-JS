@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* 
+- tailwind v4 introduces @theme to define design tokens (variables like fonts, colors, spacing) inside CSS
+- @theme means these are tailwind theme variables
+- inline means apply them directly instead of generating global CSS file
+- defining custom font variables inside tailwind's theme
+*/
+@theme inline {
+  /* creating font styles that tailwind will understand as utilities later */
+  --font-sans: var(--font-roboto-flex), Arial, Helvetica, sans-serif;
+
+  --font-black-slanted: var(--font-roboto-flex);
+  --font-black-slanted--font-variation-settings:
+    "wdth" var(--wdth, 100), "slnt" var(--slnt, -10), "opsz" var(--opsz, 144),
+    "wght" var(--wght, 1000); /* CSS variable font axes */
+
+  /* 
+  create a font style called font-bold-slanted and use the Roboto Flex font (or whatever value is stored in --font-roboto-flex
+   */
+  --font-bold-slanted: var(--font-roboto-flex);
+  --font-bold-slanted--font-variation-settings:
+    "wdth" var(--wdth, 74), "slnt" var(--slnt, -10), "opsz" var(--opsz, 100),
+    "wght" var(--wght, 600);  /* this line defines how the font should behave! */
+
+    /* tailwind uses for example "--font-bold-slanted" and creates a utility class: 
+      <p class="font-bold-slanted">Hello</p> */
+}
+
+/* 
+- @keyframes means define a custom animation
+- the animation is named marquee: describes how an element moves over time
+- this code tells the element: start here -> move left -> keep going left until halfway off the screen
+*/
+@keyframes marquee {
+  /* 
+  - 0% (start) -> element starts at its original position 
+  - 100% (end) -> element moves left by 50% of its width
+  */
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* 
+- If you add this class to an HTML element, it moves nonstop.
+- Make this element scroll left slowly for 30 seconds, and never stop.
+*/
+.animate-marquee {
+  animation-name: marquee;  /* use the animation we defined above */
+  animation-duration: 30s;  /* move takes 30s to complete */
+  animation-timing-function: linear;  /* move at a constant speed */
+  animation-iteration-count: infinite; /* repeat forever */
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  /* 
+    - This checks if a user prefers reduced motion (an accessibility setting on OS/browser).
+    - If yes: Turn off the animation completely — no movement.
+    - This helps people who feel dizzy or uncomfortable with motion.
+  */
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+.blue-gradient-bg {
+  /* 
+  - linear-gradient -> a smooth color transition
+  - the colors blend from black to multiple blue shades
+  */
+  background: linear-gradient(to bottom, #000000, #0f172a, #062f4a, #7fa0b9);
+}
+
+
+
+/*
+
+- Beginner-friendly analogy
+    Imagine you went to Starbucks and created custom drink presets:
+    Name	                Recipe
+    --my-espresso	        Coffee + 2 shots + no sugar
+    --my-latte	          Coffee + milk + foam
+
+    Then in future you can simply order:
+    "Give me my latte"
+    instead of describing the ingredients again.
+Same here — we define it once, then use as a class.
+
+*/
