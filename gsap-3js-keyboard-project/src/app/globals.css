@@ -1,5 +1,14 @@
+/* @import must appear at the very top of your CSS file — BEFORE @theme, BEFORE any rules, BEFORE anything else. */
+/* ⚠️ The Roboto Flex import MUST come before @import "tailwindcss" and before @theme inline
+Otherwise, Next.js will refuse to build. */
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1200&display=swap");
+
 @import "tailwindcss";
 
+:root {
+  --font-roboto-flex: "Roboto Flex";
+}
 /* 
 - tailwind v4 introduces @theme to define design tokens (variables like fonts, colors, spacing) inside CSS
 - @theme means these are tailwind theme variables
@@ -7,25 +16,17 @@
 - defining custom font variables inside tailwind's theme
 */
 @theme inline {
-  /* creating font styles that tailwind will understand as utilities later */
   --font-sans: var(--font-roboto-flex), Arial, Helvetica, sans-serif;
 
-  --font-black-slanted: var(--font-roboto-flex);
-  --font-black-slanted--font-variation-settings:
-    "wdth" var(--wdth, 100), "slnt" var(--slnt, -10), "opsz" var(--opsz, 144),
-    "wght" var(--wght, 1000); /* CSS variable font axes */
+  --font-black: var(--font-roboto-flex);
+  --font-black--font-variation-settings:
+    "wdth" var(--wdth, 100), "opsz" var(--opsz, 144), "wght" var(--wght, 1000);
 
-  /* 
-  create a font style called font-bold-slanted and use the Roboto Flex font (or whatever value is stored in --font-roboto-flex
-   */
-  --font-bold-slanted: var(--font-roboto-flex);
-  --font-bold-slanted--font-variation-settings:
-    "wdth" var(--wdth, 74), "slnt" var(--slnt, -10), "opsz" var(--opsz, 100),
-    "wght" var(--wght, 600);  /* this line defines how the font should behave! */
-
-    /* tailwind uses for example "--font-bold-slanted" and creates a utility class: 
-      <p class="font-bold-slanted">Hello</p> */
+  --font-bold: var(--font-roboto-flex);
+  --font-bold--font-variation-settings:
+    "wdth" var(--wdth, 74), "opsz" var(--opsz, 144), "wght" var(--wght, 1200);
 }
+/* tailwind uses for example "--font-bold" and creates a utility class: <p class="font-bold">Hello</p> */
 
 /* 
 - @keyframes means define a custom animation
@@ -50,12 +51,11 @@
 - Make this element scroll left slowly for 30 seconds, and never stop.
 */
 .animate-marquee {
-  animation-name: marquee;  /* use the animation we defined above */
-  animation-duration: 30s;  /* move takes 30s to complete */
-  animation-timing-function: linear;  /* move at a constant speed */
+  animation-name: marquee; /* use the animation we defined above */
+  animation-duration: 30s; /* move takes 30s to complete */
+  animation-timing-function: linear; /* move at a constant speed */
   animation-iteration-count: infinite; /* repeat forever */
 }
-
 
 @media (prefers-reduced-motion: reduce) {
   /* 
@@ -75,8 +75,6 @@
   */
   background: linear-gradient(to bottom, #000000, #0f172a, #062f4a, #7fa0b9);
 }
-
-
 
 /*
 
