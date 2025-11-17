@@ -388,13 +388,44 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
     }));
 
     const keycapTexture = useTexture("/goodwell_uv.png", (texture) => {
-      texture.flipY = false
-      texture.colorSpace = THREE.SRGBColorSpace
+      texture.flipY = false;
+      texture.colorSpace = THREE.SRGBColorSpace;
     });
-    
+
     const keycapMat = new THREE.MeshStandardMaterial({
       roughness: 0.7,
-      map: keycapTexture
+      map: keycapTexture,
+    });
+
+    const knobMat = new THREE.MeshStandardMaterial({
+      color: "#e24818",
+      roughness: 0.4,
+    });
+
+    const plateMat = new THREE.MeshStandardMaterial({
+      color: "#888888",
+      roughness: 0.4,
+    });
+
+    const bottomCaseMat = new THREE.MeshStandardMaterial({
+      color: "#1e548a",
+      roughness: 0.4,
+    });
+
+    const topCaseMat = new THREE.MeshStandardMaterial({
+      color: "#dddddd",
+      roughness: 0.7,
+    });
+
+    const feetMat = new THREE.MeshStandardMaterial({
+      color: "#333333",
+      roughness: 0.6,
+    });
+
+    // Screen Material
+    const screenMat = new THREE.MeshStandardMaterial({
+      color: "#cccccc",
+      roughness: 0.4,
     });
 
     const switchMat = new THREE.MeshStandardMaterial({
@@ -403,12 +434,12 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
     });
 
     const switchStemMat = new THREE.MeshStandardMaterial({
-      color: "#cccccc",
+      color: "#bb2222",
       roughness: 0.4,
     });
 
     const switchContactsMat = new THREE.MeshStandardMaterial({
-      color: "#cccccc",
+      color: "#ffcf5f",
       roughness: 0.1,
       metalness: 1,
     });
@@ -421,7 +452,7 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
             castShadow
             receiveShadow
             geometry={nodes.Plate.geometry}
-            material={keycapMat}
+            material={plateMat}
             position={[-0.022, -0.006, -0.057]}
           />
           <mesh
@@ -429,14 +460,14 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
             castShadow
             receiveShadow
             geometry={nodes.Knob.geometry}
-            material={keycapMat}
+            material={knobMat}
             position={[0.121, 0.004, -0.106]}
           />
           <mesh
             castShadow
             receiveShadow
             geometry={nodes.PCB.geometry}
-            material={keycapMat}
+            material={plateMat}
             position={[-0.022, -0.009, -0.057]}
           />
 
@@ -705,13 +736,13 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
               castShadow
               receiveShadow
               geometry={nodes.Cube005.geometry}
-              material={keycapMat}
+              material={bottomCaseMat}
             />
             <mesh
               castShadow
               receiveShadow
               geometry={nodes.Cube005_1.geometry}
-              material={keycapMat}
+              material={feetMat}
             />
           </group>
           <mesh
@@ -719,7 +750,7 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
             castShadow
             receiveShadow
             geometry={nodes.Top_Case.geometry}
-            material={keycapMat}
+            material={topCaseMat}
             position={[-0.022, -0.014, -0.057]}
           />
           <mesh
@@ -735,7 +766,7 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
             castShadow
             receiveShadow
             geometry={nodes.Screen.geometry}
-            material={keycapMat}
+            material={screenMat}
             position={[0.092, 0.001, -0.106]}
             scale={-1}
           />
