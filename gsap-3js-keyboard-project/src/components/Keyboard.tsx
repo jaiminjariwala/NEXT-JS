@@ -392,14 +392,30 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
       texture.colorSpace = THREE.SRGBColorSpace;
     });
 
+    const knurlTexture = useTexture("/Knurl.jpg", (texture) => {
+      texture.flipY = false;
+      texture.repeat.set(5, 5);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+    });
+
+    const screenTexture = useTexture("screen_uv.png", (texture) => {
+      texture.flipY = false;
+      texture.repeat.set(-1, -1);
+      texture.offset.set(1, 1);
+    });
+
     const keycapMat = new THREE.MeshStandardMaterial({
       roughness: 0.7,
       map: keycapTexture,
     });
 
     const knobMat = new THREE.MeshStandardMaterial({
-      color: "#e24818",
-      roughness: 0.4,
+      color: "#e85223",
+      roughness: 0.2,
+      metalness: 0,
+      bumpMap: knurlTexture,
+      bumpScale: 2,
     });
 
     const plateMat = new THREE.MeshStandardMaterial({
@@ -424,7 +440,7 @@ export const Keyboard = forwardRef<KeyboardRefs, KeyboardProps>(
 
     // Screen Material
     const screenMat = new THREE.MeshStandardMaterial({
-      color: "#cccccc",
+      map: screenTexture,
       roughness: 0.4,
     });
 
