@@ -45,7 +45,7 @@ export function Keycap({
   });
 
   return (
-    <Float rotationIntensity={3}>
+    <Float rotationIntensity={0.8}>
       <group dispose={null} position={position} rotation={rotation}>
         <mesh
           castShadow
