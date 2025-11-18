@@ -24,7 +24,7 @@ const BentoBox: FC<BentoBoxProps> = ({ slice }) => {
       data-slice-variation={slice.variation}
     >
       <h2
-        style={{ fontVariationSettings: `"wght" 600` }}
+        style={{ fontVariationSettings: `"wght" 800` }}
         className="mb-8 scroll-pt-6 text-6xl uppercase md:text-8xl"
       >
         <PrismicText field={slice.primary.heading} />
