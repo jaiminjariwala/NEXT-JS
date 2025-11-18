@@ -39,7 +39,7 @@ const Hero: FC<HeroProps> = ({ slice }) => {
             components={{
               heading2: ({ children }) => (
                 <h2
-                  style={{ fontVariationSettings: `"wght" 1200` }}
+                  style={{ fontVariationSettings: `"wght" 900` }}
                   className="hero-heading text-6xl leading-[0.8] uppercase sm:text-7xl lg:text-8xl"
                 >
                   {children}
@@ -60,7 +60,7 @@ const Hero: FC<HeroProps> = ({ slice }) => {
               components={{
                 heading2: ({ children }) => (
                   <h2
-                    style={{ fontVariationSettings: `"wght" 1200` }}
+                    style={{ fontVariationSettings: `"wght" 900` }}
                     className="mb-1 text-4xl uppercase lg:mb-2 lg:text-6xl"
                   >
                     {children}
