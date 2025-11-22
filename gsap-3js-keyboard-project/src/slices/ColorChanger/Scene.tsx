@@ -22,27 +22,38 @@ export function Scene({ selectedTextureId, onAnimationComplete }: SceneProps) {
   useGSAP(() => {
     if (!keyboardRef.current || selectedTextureId === currentTextureId) return;
 
-    const keyboard = keyboardRef.current;
+    const mm = gsap.matchMedia();
+    // preference for "no reduce motion"
+    mm.add("(prefers-reduced-motion: no-preference", () => {
+      const keyboard = keyboardRef.current;
+      if (!keyboard) return;
 
-    // create timeline
-    const tl = gsap.timeline({
-      onComplete: () => {
-        onAnimationComplete()
-      }
+      // create timeline
+      const tl = gsap.timeline({
+        onComplete: () => {
+          onAnimationComplete();
+        },
+      });
+
+      tl.to(keyboard.position, {
+        y: 0.3,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => {
+          setCurrentTextureId(selectedTextureId);
+        },
+      });
+      tl.to(keyboard.position, {
+        y: 0,
+        duration: 0.6,
+        ease: "elastic.out(1, 0.4)",
+      });
     });
 
-    tl.to(keyboard.position, {
-      y: 0.3,
-      duration: 0.5,
-      ease: "power2.out",
-      onComplete: () => {
-        setCurrentTextureId(selectedTextureId);
-      },
-    });
-    tl.to(keyboard.position, {
-      y: 0,
-      duration: 0.6,
-      ease: "elastic.out(1, 0.4)",
+    // preference for reduced motion
+    mm.add("(prefers-reduced-motion: reduce", () => {
+      setCurrentTextureId(selectedTextureId);
+      onAnimationComplete();
     });
   }, [selectedTextureId, currentTextureId]);
 
