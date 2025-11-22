@@ -29,7 +29,7 @@ const BentoBox: FC<BentoBoxProps> = ({ slice }) => {
       >
         <PrismicText field={slice.primary.heading} />
       </h2>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-6">
         {slice.primary.items.map((item) => (
           // Render the item
           <BentoBoxItem key={asText(item.text)} item={item} />
@@ -64,7 +64,7 @@ function BentoBoxItem({ item }: BentoBoxItemProps) {
 
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-b from-transparent to-black"></div>
 
-      <div className="absolute bottom-0 left-0 max-w-xl p-6 text-xl text-balance text-white">
+      <div className="absolute bottom-0 left-0 max-w-xl p-6 text-base sm:text-xl text-balance text-white">
         <PrismicRichText field={item.text} />
       </div>
     </div>
