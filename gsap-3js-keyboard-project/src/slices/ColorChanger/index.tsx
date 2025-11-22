@@ -1,10 +1,7 @@
 "use client";
 import { FC, useCallback, useState } from "react";
 import { Content } from "@prismicio/client";
-import {
-  PrismicText,
-  SliceComponentProps,
-} from "@prismicio/react";
+import { PrismicText, SliceComponentProps } from "@prismicio/react";
 import { Bounded } from "@/components/Bounded";
 import clsx from "clsx";
 import Image from "next/image";
@@ -116,14 +113,14 @@ const ColorChanger: FC<ColorChangerProps> = ({ slice }) => {
         <div className="shrink-0">
           <h2
             style={{ fontVariationSettings: `"wght" 800` }}
-            className="mb-1 text-8xl uppercase lg:mb-2"
+            className="mb-1 text-6xl uppercase md:text-8xl lg:mb-2"
           >
             <PrismicText field={slice.primary.heading} />
           </h2>
         </div>
-        <ul className="grid grow grid-cols-2 gap-3 rounded-2xl bg-white p-4 text-black shadow-lg sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6">
+        <ul className="flex gap-3 overflow-x-auto rounded-2xl bg-white p-4 text-black shadow-lg sm:grid sm:grid-cols-3 sm:overflow-visible md:grid-cols-6 lg:grid-cols-6">
           {KEYCAP_TEXTURES.map((texture) => (
-            <li key={texture.id}>
+            <li key={texture.id} className="shrink-0 w-1/2 sm:w-auto">
               <button
                 onClick={() => handleTextureSelect(texture)}
                 className={clsx(
