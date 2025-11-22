@@ -8,6 +8,8 @@ import { useControls } from "leva";
 import { useEffect, useState } from "react";
 // Leva is a GUI library specifically designed for React Three Fiber that creates an interactive control panel for tweaking 3D scene parameters in real-time during development.
 
+import {Leva} from "leva"
+
 // import Keyboard from "@/components/Keyboard";
 export function Scene() {
   const { positionX, positionY, positionZ, rotationX, rotationY, rotationZ } =
@@ -57,6 +59,8 @@ export function Scene() {
   return (
     // <group></group> is a react3fiber abstraction for an actual object being created
     <group>
+      <Leva hidden /> {/* works as a flag to hide or unhide leva controls */}
+
       <PerspectiveCamera makeDefault position={[0, 0, 4]} fov={50} />
       <group scale={scalingFactor}>
         <Keyboard
