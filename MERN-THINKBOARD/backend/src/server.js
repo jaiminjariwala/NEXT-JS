@@ -1,15 +1,22 @@
 import express from "express";
-import notesRoutes from "./routes/notesRoutes.js"
+import notesRoutes from "./routes/notesRoutes.js";
+import { connectDB } from "./config/db.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // create express app
 const app = express();
+const PORT = process.env.PORT || 5001;  // we added a fallback value 5001 if process.env.PORT is undefined in any case.
+
+connectDB();
 
 // if we get a request that starts with /api/notes then hit "notesRoutes" file
-app.use("/api/notes", notesRoutes)
+app.use("/api/notes", notesRoutes);
 
 // listen on port
-app.listen(5001, () => {
-  console.log("Server started on PORT: 5001");
+app.listen(PORT, () => {
+  console.log("Server started on PORT:", PORT);
 });
 
 // What is an endpoint ?
