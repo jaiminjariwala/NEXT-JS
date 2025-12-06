@@ -2,6 +2,7 @@ import express from "express";
 import notesRoutes from "./routes/notesRoutes.js";
 import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
+import rateLimiter from "./middleware/rateLimiter.js";   
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ connectDB();
 // built-in express middleware that parses incoming JSON request bodies so you can easily acess data using req.body
 // it basically reads the incoming request body
 app.use(express.json()) // parse JSON bodies
+app.use(rateLimiter)
 
 // if we get a request that starts with /api/notes then hit "notesRoutes" file
 app.use("/api/notes", notesRoutes);
