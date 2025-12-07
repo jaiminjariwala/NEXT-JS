@@ -16,7 +16,11 @@ const PORT = process.env.PORT || 5001; // we added a fallback value 5001 if proc
 // it basically reads the incoming request body
 app.use(express.json()); // parse JSON bodies
 app.use(rateLimiter);
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  })
+);
 
 // if we get a request that starts with /api/notes then hit "notesRoutes" file
 app.use("/api/notes", notesRoutes);
