@@ -1,7 +1,9 @@
 import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+
 import notesRoutes from "./routes/notesRoutes.js";
 import { connectDB } from "./config/db.js";
-import dotenv from "dotenv";
 import rateLimiter from "./middleware/rateLimiter.js";
 
 dotenv.config();
@@ -14,6 +16,7 @@ const PORT = process.env.PORT || 5001; // we added a fallback value 5001 if proc
 // it basically reads the incoming request body
 app.use(express.json()); // parse JSON bodies
 app.use(rateLimiter);
+app.use(cors());
 
 // if we get a request that starts with /api/notes then hit "notesRoutes" file
 app.use("/api/notes", notesRoutes);
