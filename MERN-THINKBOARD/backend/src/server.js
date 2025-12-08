@@ -12,15 +12,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001; // we added a fallback value 5001 if process.env.PORT is undefined in any case.
 
-// built-in express middleware that parses incoming JSON request bodies so you can easily acess data using req.body
-// it basically reads the incoming request body
-app.use(express.json()); // parse JSON bodies
-app.use(rateLimiter);
 app.use(
   cors({
     origin: "http://localhost:5173",
   })
 );
+// built-in express middleware that parses incoming JSON request bodies so you can easily acess data using req.body
+// it basically reads the incoming request body
+app.use(express.json()); // parse JSON bodies
+app.use(rateLimiter);
+
 
 // if we get a request that starts with /api/notes then hit "notesRoutes" file
 app.use("/api/notes", notesRoutes);
