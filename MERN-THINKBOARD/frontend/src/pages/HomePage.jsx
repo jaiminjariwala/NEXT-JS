@@ -57,7 +57,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen dot-grid-bg">
       <Navbar />
       {isRateLimited && <RateLimitedUI />}
       {/* show <RateLimitedUI /> component only when isRateLimited is true */}

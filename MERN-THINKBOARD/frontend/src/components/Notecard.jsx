@@ -22,7 +22,7 @@ const Notecard = ({ note, onDelete }) => {
       <Link to={`/note/${note._id}`} className="card-body flex-1 flex flex-col min-h-0">
 
         {/* Title - Fixed */}
-        <h3 className="card-title text-base-content text-xl font-semibold mb-2 shrink-0">
+        <h3 className="text-black card-title text-xl font-semibold mb-2 shrink-0">
           {note.title}
         </h3>
 
@@ -33,7 +33,7 @@ const Notecard = ({ note, onDelete }) => {
 
         {/* Footer: Always at bottom - Fixed */}
         <div className="card-actions justify-between items-center pt-3 border-t border-gray-100 shrink-0">
-          <span className="text-md text-base-content/60">
+          <span className="text-md text-[#797979]">
             {formatDate(new Date(note.createdAt))}
           </span>
           <div className="flex items-center gap-2">

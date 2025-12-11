@@ -149,7 +149,7 @@ const NoteDetailPage = () => {
                     className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
                     title="Delete note"
                   >
-                    <Trash2Icon className="w-5 h-5 group-hover:text-red-800" />
+                    <Trash2Icon className="text-black w-5 h-5 group-hover:text-red-800" />
                   </button>
                 </div>
               </div>
