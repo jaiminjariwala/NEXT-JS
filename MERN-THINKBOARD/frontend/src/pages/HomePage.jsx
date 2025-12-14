@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import RateLimitedUI from "../components/RateLimitedUI";
-import axios from "axios";
+import api from "../lib/axios";
 import toast from "react-hot-toast";
 import Notecard from "../components/Notecard";
 
@@ -20,7 +20,7 @@ const HomePage = () => {
 
   const fetchNotes = async () => {
     try {
-      const res = await axios.get("http://localhost:5001/api/notes");
+      const res = await api.get("/notes");
       console.log("Fetched notes:", res.data);
       
       // Add positions to notes if they don't have them
@@ -49,7 +49,7 @@ const HomePage = () => {
 
   const handleDelete = async (noteId) => {
     try {
-      await axios.delete(`http://localhost:5001/api/notes/${noteId}`);
+      await api.delete(`/notes/${noteId}`);
       setNotes(notes.filter((note) => note._id !== noteId));
       toast.success("Note deleted successfully");
     } catch (error) {
