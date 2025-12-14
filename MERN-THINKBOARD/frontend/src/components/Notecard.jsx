@@ -1,63 +1,102 @@
 import { Trash2Icon } from "lucide-react";
-
-// useRef is like a box that stores a value, but changing it does not refresh the UI, unlike useState
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { formatDate } from "../lib/utils";
 
-const Notecard = ({
-  note,
-  onDelete,
-  onPositionUpdate,
-}) => {
+const Notecard = ({ note, onDelete, onPositionUpdate }) => {
   const [position, setPosition] = useState({ 
     x: note.position?.x || 0, 
     y: note.position?.y || 0 
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
   const cardRef = useRef(null);
   const navigate = useNavigate();
   
   // Drag state refs
-  const isDraggingRef = useRef(false);  // tracks if we're dragging (faster than state)
-  const hasMovedRef = useRef(false);  // did the mouse actually move, or just click ?
-  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, cardX: 0, cardY: 0 });  // remembers where the mouse AND card started when we began dragging
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, cardX: 0, cardY: 0 });
+  
+  // Touch/long press refs
+  const longPressTimerRef = useRef(null);
+  const touchStartTimeRef = useRef(0);
+  const canDragRef = useRef(false);
 
-  const handleMouseDown = useCallback((e) => {
+  // Get coordinates from mouse or touch event
+  const getEventCoordinates = (e) => {
+    if (e.touches && e.touches[0]) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  };
+
+  // Start drag (both mouse and touch)
+  const handleDragStart = useCallback((e, coords) => {
     // Don't start dragging if clicking on buttons
     if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
       return;
     }
 
-    e.preventDefault(); // tells the browser "don't do your normal click behavior "
+    e.preventDefault();
     e.stopPropagation();
     
     isDraggingRef.current = true;
     setIsDragging(true);
     hasMovedRef.current = false;
     
-    // Store initial positions
     dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
+      x: coords.x,
+      y: coords.y,
       cardX: position.x,
       cardY: position.y
     };
 
-    // Change cursor immediately
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
   }, [position.x, position.y]);
 
-  const handleMouseMove = useCallback((e) => {
+  // Mouse down handler
+  const handleMouseDown = useCallback((e) => {
+    const coords = getEventCoordinates(e);
+    handleDragStart(e, coords);
+  }, [handleDragStart]);
+
+  // Touch start handler with long press
+  const handleTouchStart = useCallback((e) => {
+    // Don't start if clicking on buttons
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+      return;
+    }
+
+    const coords = getEventCoordinates(e);
+    touchStartTimeRef.current = Date.now();
+    canDragRef.current = false;
+    
+    // Start long press timer
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true);
+      canDragRef.current = true;
+      
+      // Vibrate on mobile if supported
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      handleDragStart(e, coords);
+    }, 200); // 200ms hold time
+  }, [handleDragStart]);
+
+  // Move handler (both mouse and touch)
+  const handleMove = useCallback((e) => {
     if (!isDraggingRef.current || !cardRef.current) return;
 
     e.preventDefault();
     
-    const deltaX = e.clientX - dragStartRef.current.mouseX;
-    const deltaY = e.clientY - dragStartRef.current.mouseY;
+    const coords = getEventCoordinates(e);
+    const deltaX = coords.x - dragStartRef.current.x;
+    const deltaY = coords.y - dragStartRef.current.y;
     
-    // Consider it a drag if moved more than 3px
     if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
       hasMovedRef.current = true;
     }
@@ -65,18 +104,34 @@ const Notecard = ({
     const newX = dragStartRef.current.cardX + deltaX;
     const newY = dragStartRef.current.cardY + deltaY;
 
-    // Directly update the position via CSS
     cardRef.current.style.left = `${newX}px`;
     cardRef.current.style.top = `${newY}px`;
   }, []);
 
-  const handleMouseUp = useCallback(() => {
-    if (!isDraggingRef.current) return;
+  // End drag handler (both mouse and touch)
+  const handleDragEnd = useCallback(() => {
+    // Clear long press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (!isDraggingRef.current) {
+      // If we didn't drag, check if it was a quick tap/click
+      const touchDuration = Date.now() - touchStartTimeRef.current;
+      if (touchDuration < 200 && !hasMovedRef.current) {
+        navigate(`/note/${note._id}`);
+      }
+      canDragRef.current = false;
+      setIsLongPressing(false);
+      return;
+    }
 
     isDraggingRef.current = false;
     setIsDragging(false);
+    setIsLongPressing(false);
+    canDragRef.current = false;
     
-    // Reset cursor
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
 
@@ -85,7 +140,6 @@ const Notecard = ({
     const moved = hasMovedRef.current;
     
     if (moved) {
-      // Get final position from style
       const finalX = parseInt(cardRef.current.style.left) || position.x;
       const finalY = parseInt(cardRef.current.style.top) || position.y;
       
@@ -96,24 +150,54 @@ const Notecard = ({
         onPositionUpdate(note._id, newPosition);
       }
     } else {
-      // Click - navigate to note
       navigate(`/note/${note._id}`);
     }
   }, [navigate, note._id, onPositionUpdate, position.x, position.y]);
 
+  // Touch cancel handler
+  const handleTouchCancel = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    
+    if (isDraggingRef.current) {
+      handleDragEnd();
+    }
+    
+    setIsLongPressing(false);
+    canDragRef.current = false;
+  }, [handleDragEnd]);
+
   // Set up global listeners
-  React.useEffect(() => {
-    const handleGlobalMouseMove = (e) => handleMouseMove(e);
-    const handleGlobalMouseUp = () => handleMouseUp();
+  useEffect(() => {
+    const handleGlobalMouseMove = (e) => handleMove(e);
+    const handleGlobalMouseUp = () => handleDragEnd();
+    const handleGlobalTouchMove = (e) => {
+      if (canDragRef.current) {
+        handleMove(e);
+      }
+    };
+    const handleGlobalTouchEnd = () => handleDragEnd();
 
     document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
     document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+    document.addEventListener('touchcancel', handleTouchCancel);
 
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchCancel);
+      
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [handleMove, handleDragEnd, handleTouchCancel]);
 
   const handleDelete = async (e) => {
     e.preventDefault();
@@ -132,36 +216,41 @@ const Notecard = ({
     <div
       ref={cardRef}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       style={{
         position: 'absolute',
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: '350px',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
+        touchAction: 'none',
       }}
-      className={`card shadow-[0_12px_24px_rgba(0,0,0,0.02),0_-3px_10px_rgba(0,0,0,0.02)] rounded-2xl p-1 bg-white border-[#ededed] border h-[300px] flex flex-col ${
-        isDragging 
-          ? 'shadow-[0_20px_40px_rgba(0,0,0,0.12)] z-50' 
-          : 'translate-y-[-8px] hover:shadow-[0_16px_32px_rgba(0,0,0,0.06),0_-4px_12px_rgba(0,0,0,0.03)] hover:scale-[1.03] transition-all duration-200'
-      }`}
+      className={`card shadow-[0_12px_24px_rgba(0,0,0,0.02),0_-3px_10px_rgba(0,0,0,0.02)] rounded-2xl p-1 bg-white border-[#ededed] border flex flex-col
+        w-[350px] h-[300px] 
+        sm:w-[350px] sm:h-[300px]
+        ${isLongPressing ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}
+        ${
+          isDragging 
+            ? 'shadow-[0_20px_40px_rgba(0,0,0,0.12)] z-50 scale-105' 
+            : 'hover:shadow-[0_16px_32px_rgba(0,0,0,0.06),0_-4px_12px_rgba(0,0,0,0.03)] md:hover:scale-[1.03] transition-all duration-200'
+        }`}
     >
       <div className="card-body flex-1 flex flex-col min-h-0 p-4">
         {/* Title - Fixed */}
-        <h3 className="text-black card-title text-xl font-semibold mb-2 shrink-0">
+        <h3 className="text-black card-title text-lg sm:text-xl font-semibold mb-2 shrink-0 line-clamp-2">
           {note.title}
         </h3>
 
         {/* Content Preview - Scrollable on hover */}
         <div className="flex-1 overflow-hidden hover:overflow-y-auto mb-4 min-h-0">
-          <p className="text-gray-600 text-lg font-mediun whitespace-pre-line">
+          <p className="text-gray-600 text-base sm:text-lg font-medium whitespace-pre-line line-clamp-6">
             {note.content || "No content"}
           </p>
         </div>
 
         {/* Footer: Always at bottom - Fixed */}
         <div className="card-actions justify-between items-center pt-3 border-t border-gray-100 shrink-0">
-          <span className="text-md text-[#797979]">
+          <span className="text-sm sm:text-md text-[#797979]">
             {formatDate(new Date(note.createdAt))}
           </span>
           <div className="flex items-center gap-2">
