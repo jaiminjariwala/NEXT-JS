@@ -23,14 +23,34 @@ const HomePage = () => {
       const res = await api.get("/notes");
       console.log("Fetched notes:", res.data);
       
+      // Check if we're on mobile
+      const isMobile = window.innerWidth < 768;
+      
       // Add positions to notes if they don't have them
-      const notesWithPositions = res.data.map((note, index) => ({
-        ...note,
-        position: note.position || {
-          x: 50 + (index % 3) * 400,
-          y: 50 + Math.floor(index / 3) * 350,
-        },
-      }));
+      const notesWithPositions = res.data.map((note, index) => {
+        if (note.position) {
+          return note;
+        }
+        
+        // Different positioning for mobile vs desktop
+        if (isMobile) {
+          return {
+            ...note,
+            position: {
+              x: 20,
+              y: 20 + (index * 320), // Stack vertically on mobile
+            },
+          };
+        } else {
+          return {
+            ...note,
+            position: {
+              x: 50 + (index % 3) * 400,
+              y: 50 + Math.floor(index / 3) * 350,
+            },
+          };
+        }
+      });
       
       setNotes(notesWithPositions);
       setIsRateLimited(false);
@@ -84,7 +104,7 @@ const HomePage = () => {
         {/* Notes exist - show them in canvas */}
         {!loading && !isRateLimited && notes.length > 0 && (
           <div 
-            className="relative w-full h-[calc(100vh-80px)] overflow-hidden"
+            className="relative w-full h-[calc(100vh-80px)] overflow-auto"
             style={{
               contain: 'layout style paint',
             }}
