@@ -94,13 +94,13 @@ const CreatePage = () => {
               <div className="flex justify-end items-center gap-3">
                 <Link
                   to={"/"}
-                  className="items-center px-4 py-2 border border-gray-200 rounded-lg text-[#272343] font-medium hover:text-white hover:bg-[#272343] transition-colors"
+                  className="items-center px-4 py-2 border border-gray-200 rounded-lg text-black hover:font-semibold font-medium  transition-colors"
                 >
                   Cancel
                 </Link>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#272343] text-white rounded-lg font-medium hover:bg-white hover:text-[#272343] hover:border-[#272343] border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[#d8eff9] text-black rounded-lg font-medium hover:text-[#272343] hover:font-semibold hover:text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   disabled={loading}
                 >
                   {loading ? "Creating..." : "Create note"}
