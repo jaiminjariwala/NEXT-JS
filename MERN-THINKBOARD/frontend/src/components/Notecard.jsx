@@ -1,7 +1,8 @@
-import { Trash2Icon } from "lucide-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { formatDate } from "../lib/utils";
+import wastebasketIcon1 from "../assets/icons/wastebasket-1.svg";
+import wastebasketIcon3 from "../assets/icons/wastebasket-3.svg"
 
 const Notecard = ({ note, onDelete, onPositionUpdate }) => {
   const [position, setPosition] = useState({ 
@@ -10,17 +11,17 @@ const Notecard = ({ note, onDelete, onPositionUpdate }) => {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
-  const cardRef = useRef(null);
+  const cardRef = useRef(null);     // reference to the actual HTML element (Note card)
   const navigate = useNavigate();
   
   // Drag state refs
-  const isDraggingRef = useRef(false);
-  const hasMovedRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, cardX: 0, cardY: 0 });
+  const isDraggingRef = useRef(false);  // fast-access boolean for "are we dragging?"
+  const hasMovedRef = useRef(false);    // did the mouse/finger actually move? (to distinguish click from drag)
+  const dragStartRef = useRef({ x: 0, y: 0, cardX: 0, cardY: 0 });    // remembers where drag started
   
   // Touch/long press refs
-  const longPressTimerRef = useRef(null);
-  const touchStartTimeRef = useRef(0);
+  const longPressTimerRef = useRef(null);   // stores the timer for detecting long press
+  const touchStartTimeRef = useRef(0);    // when the touch started (to calculate duration)
   const canDragRef = useRef(false);
 
   // Get coordinates from mouse or touch event
@@ -250,16 +251,25 @@ const Notecard = ({ note, onDelete, onPositionUpdate }) => {
 
         {/* Footer: Always at bottom - Fixed */}
         <div className="card-actions justify-between items-center pt-3 border-t border-gray-100 shrink-0">
-          <span className="text-sm sm:text-md text-[#797979]">
+          <span className="text-md sm:text-md text-[#000000]">
             {formatDate(new Date(note.createdAt))}
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={handleDelete}
-              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+              className="rounded-lg transition-all group"
               title="Delete note"
             >
-              <Trash2Icon className="w-4 h-4 text-black group-hover:text-red-800" />
+              <img 
+                src={wastebasketIcon1} 
+                alt="Delete" 
+                className="cursor-pointer w-10 h-10 block group-hover:hidden"
+              />
+              <img 
+                src={wastebasketIcon3} 
+                alt="Delete" 
+                className="cursor-pointer w-10 h-10 hidden group-hover:block"
+              />
             </button>
           </div>
         </div>
