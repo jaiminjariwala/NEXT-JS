@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router";
-import { ArrowLeftIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 import api from "../lib/axios";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { formatDate } from "../lib/utils";
+import wastebasketIcon1 from "../assets/icons/wastebasket-1.svg";
+import wastebasketIcon3 from "../assets/icons/wastebasket-3.svg"
 
 const NoteDetailPage = () => {
   const { id } = useParams();
@@ -146,10 +148,19 @@ const NoteDetailPage = () => {
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                    className="rounded-lg transition-colors group"
                     title="Delete note"
                   >
-                    <Trash2Icon className="text-black w-5 h-5 group-hover:text-red-800" />
+                    <img
+                      src={wastebasketIcon1}
+                      alt="Delete"
+                      className="cursor-pointer w-10 h-10 block group-hover:hidden"
+                    />
+                    <img
+                      src={wastebasketIcon3}
+                      alt="Delete"
+                      className="cursor-pointer w-10 h-10 hidden group-hover:block"
+                    />
                   </button>
                 </div>
               </div>
@@ -195,13 +206,13 @@ const NoteDetailPage = () => {
                     setEditTitle(note.title);
                     setEditContent(note.content);
                   }}
-                  className="items-center px-4 py-2 border border-gray-200 rounded-lg text-[#272343] font-medium hover:text-white hover:bg-[#272343] transition-colors"
+                  className="items-center px-4 py-2 border border-gray-200 rounded-lg text-black hover:font-semibold font-medium  transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#272343] text-white rounded-lg font-medium hover:bg-white hover:text-[#272343] hover:border-[#272343] border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[#d8eff9] text-black rounded-lg font-medium hover:text-[#272343] hover:font-semibold hover:text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   Save changes
                 </button>
