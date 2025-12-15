@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "echo 'Run these in separate terminals:' && echo '1. npm run dev:backend' && echo '2. npm run dev:frontend'",
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "npm run start --prefix backend",
     "start:prod": "NODE_ENV=production npm run start --prefix backend"
