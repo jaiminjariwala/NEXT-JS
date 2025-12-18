@@ -16,7 +16,7 @@ const Navbar = () => {
   return (
     <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
       {/* logo */}
-      <NavLink to="/">
+      <NavLink to="/" onClick={() => setOpen(false)}>
         <img
           className="h-9.5 hover:h-10 transition-all"
           src={assets.logo}
@@ -61,7 +61,7 @@ const Navbar = () => {
           </svg>
         </div>
 
-        <div className="relative cursor-pointer">
+        <div onClick={() => navigate("/cart")} className="relative cursor-pointer">
           <svg
             width="22"
             height="22"
@@ -81,13 +81,23 @@ const Navbar = () => {
           </button>
         </div>
 
-        <button className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary-hover transition text-black rounded-full">
-          Login
-        </button>
+        {!user ? (
+          <button onClick={() => setShowUserLogin(true)} className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary-hover transition text-black rounded-full">
+            Login
+          </button>
+        ) : (
+          <div className="relative group">
+            <img src={assets.profile_icon} className="w-10" alt="user-profile-icon" />
+            <ul className="hidden group-hover:block absolute top-10 right-0 bg-white shadow border border-gray-200 py-2.5 w-25 rounded-md text-sm z-40">
+              <li onClick={() => navigate("my-orders")} className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer">My Orders</li>
+              <li onClick={logout} className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer">Logout</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <button
-        onClick={() => (open ? setOpen(false) : setOpen(true))}
+        onClick={() => (open ? setOpen(false) : setOpen(true))} // if button (onClick) is already open then close it, else open it.
         aria-label="Menu"
         className="sm:hidden"
       >
@@ -106,55 +116,60 @@ const Navbar = () => {
       </button>
 
       {/* mobile Menu */}
-      <div
-        className={`${open ? "flex" : "hidden"} absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden`}
-      >
-        <NavLink to="/" onClick={() => setOpen(false)} className="block">
-          Home
-        </NavLink>
-        <NavLink
-          to="/products"
-          onClick={() => setOpen(false)}
-          className="block"
+      {open && (
+        <div
+          className={
+            "absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden"
+          }
         >
-          About
-        </NavLink>
-
-        {/* show MyOrders only when user is logged in */}
-        {user && (
+          <NavLink to="/" onClick={() => setOpen(false)} className="block">
+            Home
+          </NavLink>
           <NavLink
             to="/products"
             onClick={() => setOpen(false)}
             className="block"
           >
-            My Orders
+            About
           </NavLink>
-        )}
 
-        <NavLink to="/" onClick={() => setOpen(false)} className="block">
-          Contact
-        </NavLink>
+          {/* show MyOrders only when user is logged in */}
+          {user && (
+            <NavLink
+              to="/products"
+              onClick={() => setOpen(false)}
+              className="block"
+            >
+              My Orders
+            </NavLink>
+          )}
 
-        {/* when the user is not logged in then show Login button else show Logout button */}
-        {/* when we click on the Login button, it should close the Mobile menu and should open the pop where we will display the login form */}
-        {!user ? (
-          <button
-            onClick={() => {
-              setOpen(false);
-              setShowUserLogin(true);
-            }}
-            className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm"
-          >
-            Login
-          </button>
-        ) : (
-          <button
-            onClick={logout} 
-            className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm">
-            Logout
-          </button>
-        )}
-      </div>
+          <NavLink to="/" onClick={() => setOpen(false)} className="block">
+            Contact
+          </NavLink>
+
+          {/* when the user is not logged in then show Login button else show Logout button */}
+          {/* when we click on the Login button, it should close the Mobile menu and should open the pop where we will display the login form */}
+          {!user ? (
+            <button
+              onClick={() => {
+                setOpen(false);
+                setShowUserLogin(true);
+              }}
+              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm"
+            >
+              Login
+            </button>
+          ) : (
+            <button
+              onClick={logout}
+              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm"
+            >
+              Logout
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 };
