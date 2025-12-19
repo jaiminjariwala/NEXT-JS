@@ -14,7 +14,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
+    <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-gray-300 bg-white relative transition-all">
       {/* logo */}
       <NavLink to="/" onClick={() => setOpen(false)}>
         <img
@@ -25,12 +25,27 @@ const Navbar = () => {
       </NavLink>
 
       {/* Desktop Menu */}
-      <div className="hidden sm:flex items-center gap-8">
-        <NavLink to="/">Home</NavLink>
-        <NavLink to="/products">All Products</NavLink>
-        <NavLink to="/">Contact</NavLink>
+      <div className="hidden sm:flex items-center gap-8 text-[16px]">
+        <NavLink
+          to="/"
+          className={"hover:font-medium transition-all"}
+        >
+          Home
+        </NavLink>
+        <NavLink
+          to="/products"
+          className={"hover:font-medium transition-all"}
+        >
+          All Products
+        </NavLink>
+        <NavLink
+          to="/"
+          className={"hover:font-medium transition-all"}
+        >
+          Contact
+        </NavLink>
 
-        <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-200 px-3 rounded-full">
+        <div className="hidden lg:flex items-center text-[15px] gap-2 border border-gray-200 px-3 rounded-full">
           <input
             className="py-2 w-full bg-transparent outline-none placeholder-gray-500"
             type="text"
@@ -61,36 +76,60 @@ const Navbar = () => {
           </svg>
         </div>
 
-        <div onClick={() => navigate("/cart")} className="relative cursor-pointer">
+        <div
+          onClick={() => navigate("/cart")}
+          className="relative cursor-pointer group"
+        >
           <svg
             width="22"
             height="22"
             viewBox="0 0 14 14"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
+            className="transition-all duration-200"
           >
             <path
               d="M.583.583h2.333l1.564 7.81a1.17 1.17 0 0 0 1.166.94h5.67a1.17 1.17 0 0 0 1.167-.94l.933-4.893H3.5m2.333 8.75a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0m6.417 0a.583.583 0 1 1-1.167 0 .583.583 0 0 1 1.167 0"
-              stroke="#000000"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              className="group-hover:stroke-[1.5]"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
+
           <button className="absolute -top-2 -right-3 text-xs text-black bg-primary w-[20px] h-[20px] rounded-full">
             3
           </button>
         </div>
 
         {!user ? (
-          <button onClick={() => setShowUserLogin(true)} className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary-hover transition text-black rounded-full">
+          <button
+            onClick={() => setShowUserLogin(true)}
+            className="cursor-pointer px-8 py-2 bg-primary hover:bg-primary-hover transition text-black rounded-full hover:font-medium"
+          >
             Login
           </button>
         ) : (
           <div className="relative group">
-            <img src={assets.profile_icon} className="w-10" alt="user-profile-icon" />
+            <img
+              src={assets.profile_icon}
+              className="w-10"
+              alt="user-profile-icon"
+            />
             <ul className="hidden group-hover:block absolute top-10 right-0 bg-white shadow border border-gray-200 py-2.5 w-25 rounded-md text-sm z-40">
-              <li onClick={() => navigate("my-orders")} className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer">My Orders</li>
-              <li onClick={logout} className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer">Logout</li>
+              <li
+                onClick={() => navigate("my-orders")}
+                className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer"
+              >
+                My Orders
+              </li>
+              <li
+                onClick={logout}
+                className="p-1.5 pl-3 hover:bg-primary/10 cursor-pointer"
+              >
+                Logout
+              </li>
             </ul>
           </div>
         )}
@@ -109,9 +148,9 @@ const Navbar = () => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <rect width="21" height="1.5" rx=".75" fill="#000000" />
-          <rect x="8" y="6" width="13" height="1.5" rx=".75" fill="#000000" />
-          <rect x="6" y="13" width="15" height="1.5" rx=".75" fill="#000000" />
+          <rect width="21" height="1.9" rx=".75" fill="#000000" />
+          <rect x="8" y="6" width="13" height="1.9" rx=".75" fill="#000000" />
+          <rect x="6" y="13" width="15" height="1.9" rx=".75" fill="#000000" />
         </svg>
       </button>
 
@@ -119,7 +158,7 @@ const Navbar = () => {
       {open && (
         <div
           className={
-            "absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden"
+            "absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-[16px] md:hidden z-10"
           }
         >
           <NavLink to="/" onClick={() => setOpen(false)} className="block">
@@ -156,14 +195,14 @@ const Navbar = () => {
                 setOpen(false);
                 setShowUserLogin(true);
               }}
-              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm"
+              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-base"
             >
               Login
             </button>
           ) : (
             <button
               onClick={logout}
-              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-sm"
+              className="cursor-pointer px-6 py-2 mt-2 bg-primary hover:bg-primary-hover transition text-black rounded-full text-base"
             >
               Logout
             </button>
