@@ -1,0 +1,35 @@
+/* Custom Scrollbar Styles */
+.customScrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.customScrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 30px;
+}
+
+.customScrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.customScrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+  background-clip: content-box;
+}
+
+/* Scrollbar corner (where vertical and horizontal meet) */
+.customScrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Ensure syntax highlighter background is transparent */
+.codeTransparent,
+.codeTransparent pre,
+.codeTransparent code,
+.codeTransparent span {
+  background: transparent !important;
+}
