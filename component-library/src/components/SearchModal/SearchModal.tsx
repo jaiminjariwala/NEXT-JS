@@ -68,16 +68,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Search Components"
       maxWidth="max-w-2xl"
       verticalPosition="top"
       footer={footer}
+      showHeader={false}
       shouldPreventDrag={(target) => {
         return !!target.closest('button') || !!target.closest('input');
       }}
     >
       {/* Search Input */}
-      <form onSubmit={handleSubmit} className="px-6 pb-4 z-10 relative">
+      <form onSubmit={handleSubmit} className="px-6 pt-6 pb-4 z-10 relative">
         <div className="relative flex items-center rounded-[24px] bg-white/30 border border-white/40 shadow-[inset_0_4px_12px_rgba(0,0,0,0.03)] overflow-hidden">
           <input
             ref={inputRef}

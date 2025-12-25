@@ -8,13 +8,14 @@ import { useDraggable } from "@/hooks/useDraggable";
 interface BaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   children: ReactNode;
   maxWidth?: string;
   maxHeight?: string;
   verticalPosition?: "center" | "top";
   footer?: ReactNode;
   shouldPreventDrag?: (target: HTMLElement) => boolean;
+  showHeader?: boolean;
 }
 
 export const BaseModal: React.FC<BaseModalProps> = ({
@@ -27,6 +28,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   verticalPosition = "center",
   footer,
   shouldPreventDrag,
+  showHeader = true,
 }) => {
   const {
     elementRef,
@@ -125,17 +127,19 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             <div className="absolute top-6 left-12 w-24 h-4 bg-linear-to-r from-white/80 to-transparent rounded-full blur-md -rotate-12 pointer-events-none" />
 
             {/* Header */}
-            <div className="flex-none flex items-center justify-between p-5.5 pt-5 pl-7 pb-4 z-10 relative">
-              <h2 className="text-2xl font-semibold text-black tracking-tight">
-                {title}
-              </h2>
-              <button
-                onClick={onClose}
-                className="p-2 bg-white/40 hover:bg-white/80 rounded-full transition-all text-black border border-white/50 shadow-sm"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            {showHeader && (
+              <div className="flex-none flex items-center justify-between p-5.5 pt-5 pl-7 pb-4 z-10 relative">
+                <h2 className="text-2xl font-semibold text-black tracking-tight">
+                  {title}
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 bg-white/40 hover:bg-white/80 rounded-full transition-all text-black border border-white/50 shadow-sm"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
 
             {/* Main Content */}
             {children}
