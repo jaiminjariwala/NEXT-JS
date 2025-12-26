@@ -231,7 +231,7 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
         }}
       >
         {/* Zoom controls - top right corner */}
-        <div className="absolute top-4 right-4 z-10 flex flex-row bg-white rounded items-center">
+        <div className="absolute top-10 md:top-4 right-4 z-10 flex flex-row bg-white rounded items-center">
           <button
             onClick={() => setScale((prev) => Math.min(prev + 0.1, 3))}
             className="px-4 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-xl font-light"
@@ -299,6 +299,7 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
           onClose={() => setIsModalOpen(false)}
           code={selectedItem.code}
           componentName={selectedItem.name}
+          component={selectedItem.component}
         />
       )}
     </>
