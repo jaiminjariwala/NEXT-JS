@@ -41,9 +41,36 @@ export const useDraggable = ({
 
   const handleDragStart = useCallback(
     (e: MouseEvent | TouchEvent, coords: { x: number; y: number }) => {
+      const target = e.target as HTMLElement;
+      
       // Check if we should prevent drag
-      if (shouldPreventDrag && shouldPreventDrag(e.target as HTMLElement)) {
+      if (shouldPreventDrag && shouldPreventDrag(target)) {
         return;
+      }
+
+      // For touch events, check if the target or any parent has scrollable content
+      if ('touches' in e) {
+        let element: HTMLElement | null = target;
+        while (element && element !== elementRef.current) {
+          const hasOverflow = 
+            element.scrollHeight > element.clientHeight || 
+            element.scrollWidth > element.clientWidth;
+          
+          const overflowY = window.getComputedStyle(element).overflowY;
+          const overflowX = window.getComputedStyle(element).overflowX;
+          
+          const isScrollable = 
+            hasOverflow && 
+            (overflowY === 'auto' || overflowY === 'scroll' || 
+             overflowX === 'auto' || overflowX === 'scroll');
+          
+          if (isScrollable) {
+            // This is a scrollable area, don't prevent default to allow scrolling
+            return;
+          }
+          
+          element = element.parentElement;
+        }
       }
 
       e.preventDefault();

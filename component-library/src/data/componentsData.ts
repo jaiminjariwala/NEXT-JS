@@ -1,6 +1,7 @@
 import { ShowcaseItem } from "@/types";
 import { Clock } from "@/components/library/Clock/Clock";
 import { Calendar } from "@/components/library/Calendar/Calendar";
+import { FlipCalendar } from "@/components/library/FlipCalendar/FlipCalendar";
 
 export const showcaseItems: ShowcaseItem[] = [
   {
@@ -145,6 +146,190 @@ export const Calendar = () => {
         >
           {month}
         </span>
+      </div>
+    </div>
+  );
+};`,
+      css: `/* No external CSS needed - uses Tailwind classes */`,
+    },
+  },
+  {
+    id: "flip-calendar-1",
+    name: "Flip Calendar",
+    category: "UI Components",
+    component: FlipCalendar,
+    code: {
+      tsx: `'use client';
+
+import React, { useState } from 'react';
+
+export const FlipCalendar = () => {
+  const [isFlipping, setIsFlipping] = useState(false);
+
+  const toggleFlip = () => {
+    if (isFlipping) return;
+    setIsFlipping(true);
+    setTimeout(() => setIsFlipping(false), 700);
+  };
+
+  return (
+    <div className="flex items-center justify-center p-6">
+      <div
+        onClick={toggleFlip}
+        className="relative w-[320px] h-[320px] cursor-pointer"
+        style={{ perspective: 1400 }}
+        aria-hidden
+      >
+        {/* --- STACK BASES (depth) --- */}
+        <div
+          className="absolute left-6 right-6 bottom-[-34px] rounded-[36px]"
+          style={{
+            height: 46,
+            background: 'linear-gradient(180deg,#07245a,#06183a)',
+            filter: 'blur(8px)',
+            opacity: 0.45,
+            transform: 'translateY(18px)',
+          }}
+        />
+        <div
+          className="absolute left-2 right-2 bottom-[-18px] rounded-[36px]"
+          style={{
+            height: 64,
+            background: 'linear-gradient(180deg,#0f3db2,#0a2d77)',
+            boxShadow: '0 20px 40px rgba(2,6,23,0.6)',
+            transform: 'translateY(8px)',
+          }}
+        />
+
+        {/* --- MAIN CARD --- */}
+        <div
+          className="relative w-full h-full rounded-[36px] overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg,#2e70ff 0%, #1558d6 60%)',
+            boxShadow:
+              '0 10px 30px rgba(6,12,35,0.6), inset 0 6px 18px rgba(255,255,255,0.02)',
+          }}
+        >
+          {/* Top half (front face) */}
+          <div className="relative h-1/2 flex flex-col items-center justify-end pb-4">
+            <span className="text-[30px] text-[#b7d0ff] font-extralight tracking-tight">Mon</span>
+            <div
+              className="absolute w-full flex items-end justify-center pointer-events-none"
+              style={{ bottom: 6 }}
+            >
+              <div className="text-[140px] font-extralight leading-none text-white select-none">23</div>
+            </div>
+            {/* inner crease shadow at bottom of top half */}
+            <div
+              className="absolute left-0 right-0 bottom-0 pointer-events-none"
+              style={{
+                height: 18,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0))',
+              }}
+            />
+          </div>
+
+          {/* Seam (divider) */}
+          <div
+            className="relative z-10"
+            style={{
+              height: 6,
+              background:
+                'linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,255,255,0.05) 30%, rgba(0,0,0,0.3) 70%)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.45) inset',
+            }}
+          />
+
+          {/* Bottom half */}
+          <div className="relative h-1/2 flex flex-col items-center justify-start pt-4 overflow-hidden">
+            {/* crease shadow from top */}
+            <div
+              className="absolute left-0 right-0 top-0 pointer-events-none"
+              style={{
+                height: 36,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0))',
+                zIndex: 8,
+                transform: 'translateY(-6px)',
+              }}
+            />
+            <div className="text-[140px] font-extralight leading-none text-white select-none translate-y-[-12%]">
+              23
+            </div>
+          </div>
+
+          {/* --- FLIP LEAF (front face) --- */}
+          <div
+            className="absolute left-0 right-0 top-0 h-1/2 z-30 rounded-t-[36px] overflow-hidden"
+            style={{
+              transformStyle: 'preserve-3d',
+              transformOrigin: 'bottom center',
+              transition: 'transform 700ms cubic-bezier(.2,.9,.3,1), opacity 400ms',
+              transform: isFlipping ? 'rotateX(-180deg)' : 'rotateX(0deg)',
+              backfaceVisibility: 'hidden',
+            }}
+          >
+            <div
+              className="w-full h-full flex flex-col items-center justify-end pb-4"
+              style={{
+                background: 'linear-gradient(180deg,#2c6bff,#1560d4)',
+                boxShadow: 'inset 0 -6px 18px rgba(0,0,0,0.3)',
+                WebkitBackfaceVisibility: 'hidden',
+              }}
+            >
+              <span className="text-[30px] text-[#b7d0ff] font-extralight tracking-tight">Mon</span>
+              <div className="text-[140px] font-extralight leading-none text-white select-none">23</div>
+              <div
+                className="absolute left-0 right-0 bottom-0"
+                style={{
+                  height: 16,
+                  background: 'linear-gradient(180deg, rgba(0,0,0,0.45), transparent)',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* --- FLIP LEAF BACK SIDE --- */}
+          <div
+            className="absolute left-0 right-0 top-0 h-1/2 z-20 rounded-t-[36px] overflow-hidden"
+            style={{
+              transformStyle: 'preserve-3d',
+              transformOrigin: 'bottom center',
+              transition: 'transform 700ms cubic-bezier(.2,.9,.3,1)',
+              transform: isFlipping ? 'rotateX(0deg)' : 'rotateX(180deg)',
+              backfaceVisibility: 'hidden',
+            }}
+          >
+            <div
+              className="w-full h-full flex items-end justify-center pb-4"
+              style={{
+                background: 'linear-gradient(180deg,#133a92,#071a43)',
+                boxShadow: 'inset 0 -12px 24px rgba(0,0,0,0.55)',
+                WebkitBackfaceVisibility: 'hidden',
+              }}
+            >
+              <span className="text-[30px] text-[#8aa6ff] font-extralight tracking-tight">Mon</span>
+              <div className="text-[140px] font-extralight leading-none text-white/80 select-none">23</div>
+            </div>
+          </div>
+
+          {/* --- GLOSSY OVERLAY --- */}
+          <div
+            className="absolute inset-0 rounded-[36px] pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(140deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 30%, rgba(255,255,255,0.005) 60%, transparent 100%)',
+            }}
+          />
+
+          {/* bevel highlight */}
+          <div
+            className="absolute left-6 top-6 w-[70%] h-8 rounded-full pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0))',
+              transform: 'rotate(-8deg)',
+            }}
+          />
+        </div>
       </div>
     </div>
   );
