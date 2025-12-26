@@ -32,12 +32,12 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Left Sidebar Navigation */}
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50">
+      {/* Sidebar/Navbar - Desktop sidebar, Mobile navbar */}
       <Sidebar onSearchClick={() => setIsSearchOpen(true)} />
 
       {/* Main Canvas Area */}
-      <main className="flex-1 h-screen overflow-hidden">
+      <main className="flex-1 h-full overflow-hidden">
         <Canvas highlightedItemId={highlightedItemId} />
       </main>
 
