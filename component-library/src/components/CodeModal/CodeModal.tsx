@@ -15,6 +15,7 @@ interface CodeModalProps {
     css: string;
   };
   componentName: string;
+  component?: React.ComponentType;
 }
 
 export const CodeModal: React.FC<CodeModalProps> = ({
@@ -22,6 +23,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   onClose,
   code,
   componentName,
+  component: Component,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -37,13 +39,49 @@ export const CodeModal: React.FC<CodeModalProps> = ({
       onClose={onClose}
       title={componentName}
       maxWidth="max-w-3xl"
-      maxHeight="max-h-[80vh]"
+      maxHeight="max-h-[90vh]"
       verticalPosition="center"
       shouldPreventDrag={(target) => {
-        return !!target.closest('button');
+        // Prevent drag on buttons, scrollable code area, and component preview
+        return !!target.closest('button') || 
+               !!target.closest(`.${styles.scrollableCodeArea}`) ||
+               !!target.closest(`.${styles.componentPreview}`);
       }}
     >
-      <div className="flex-1 px-6 pb-6 z-10 relative" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="flex-1 px-6 pb-6 z-10 relative" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        
+        {/* Component Preview Section */}
+        {Component && (
+          <div 
+            className={styles.componentPreview}
+            style={{ 
+              position: 'relative',
+              borderRadius: '32px',
+              background: 'rgba(255, 255, 255, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.03)',
+              padding: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '200px',
+            }}
+          >
+            {/* Preview Label */}
+            <div className="absolute top-4 left-6 z-30">
+              <span className="px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black">
+                preview
+              </span>
+            </div>
+            
+            {/* Live Component */}
+            <div className="scale-75 origin-center">
+              <Component />
+            </div>
+          </div>
+        )}
+
+        {/* Code Section */}
         <div style={{ 
           position: 'relative',
           flex: 1,
@@ -79,12 +117,16 @@ export const CodeModal: React.FC<CodeModalProps> = ({
           </div>
 
           {/* SCROLLABLE AREA */}
-          <div style={{ 
-            flex: 1,
-            minHeight: 0,
-            overflow: 'auto',
-            WebkitOverflowScrolling: 'touch'
-          }} className={styles.customScrollbar}>
+          <div 
+            className={`${styles.customScrollbar} ${styles.scrollableCodeArea}`}
+            style={{ 
+              flex: 1,
+              minHeight: 0,
+              overflow: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y pan-x'
+            }}
+          >
             <div style={{ padding: "4.5rem 2rem 2rem 2rem" }}>
               <SyntaxHighlighter
                 language="tsx"

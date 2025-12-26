@@ -33,3 +33,13 @@
 .codeTransparent span {
   background: transparent !important;
 }
+
+/* Scrollable code area class for identification */
+.scrollableCodeArea {
+  /* The actual styles are inline, this class is just for identification */
+}
+
+/* Component preview area class for identification */
+.componentPreview {
+  /* The actual styles are inline, this class is just for identification */
+}
