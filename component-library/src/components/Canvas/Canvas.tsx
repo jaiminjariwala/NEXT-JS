@@ -18,14 +18,39 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
 
   // Set initial positions only on client side
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
+    const viewportWidth = window.innerWidth;
+    const isMobile = viewportWidth < 768;
+    const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
 
-    const initialItems = showcaseItems.map((item, index) => ({
-      id: item.id,
-      position: isMobile
-        ? { x: 20, y: 20 + index * 400 }
-        : { x: 50 + (index % 3) * 450, y: 50 + Math.floor(index / 3) * 400 },
-    }));
+    // Component dimensions (approximate)
+    const componentWidth = 320; // Adjust based on your largest component
+    const componentHeight = 320;
+    const gap = 20; // Gap between components
+
+    // Calculate how many components fit per row based on viewport
+    let componentsPerRow;
+    if (isMobile) {
+      componentsPerRow = 1;
+    } else if (isTablet) {
+      componentsPerRow = Math.floor((viewportWidth - 280) / (componentWidth + gap)); // 280 is sidebar width
+    } else {
+      componentsPerRow = Math.floor((viewportWidth - 280) / (componentWidth + gap));
+    }
+
+    componentsPerRow = Math.max(1, componentsPerRow); // Ensure at least 1 per row
+
+    const initialItems = showcaseItems.map((item, index) => {
+      const row = Math.floor(index / componentsPerRow);
+      const col = index % componentsPerRow;
+
+      return {
+        id: item.id,
+        position: {
+          x: gap + col * (componentWidth + gap),
+          y: gap + row * (componentHeight + gap),
+        },
+      };
+    });
 
     // Use startTransition to mark this as a non-urgent update
     startTransition(() => {

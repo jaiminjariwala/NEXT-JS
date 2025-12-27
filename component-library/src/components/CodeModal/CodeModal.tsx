@@ -64,7 +64,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '200px',
+              minHeight: '240px',
             }}
           >
             {/* Preview Label */}
@@ -75,7 +75,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
             </div>
             
             {/* Live Component */}
-            <div className="scale-75 origin-center">
+            <div className="scale-70 origin-center">
               <Component />
             </div>
           </div>
