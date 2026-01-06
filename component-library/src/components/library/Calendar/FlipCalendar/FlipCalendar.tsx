@@ -39,7 +39,7 @@ export const FlipCalendar = () => {
         clearTimeout(autoPlayTimerRef.current);
       }
     };
-  }, [isAutoPlay]);
+  }, [isAutoPlay, displayDate]);
 
   const handleFlip = (type: string, isAuto = false) => {
     if (isFlipping) return;
@@ -66,7 +66,7 @@ export const FlipCalendar = () => {
     setTimeout(() => {
       setDisplayDate(next);
       setIsFlipping(false);
-    }, 1500);
+    }, 2000);
   };
 
   const currDay = displayDate.toLocaleString("en-US", { weekday: "short" });
@@ -77,29 +77,32 @@ export const FlipCalendar = () => {
   return (
     <div className="flex flex-col items-center justify-center p-8">
       <div
-        className="relative w-60 h-60 cursor-pointer select-none"
+        className="relative w-64 h-60 cursor-pointer select-none"
         style={{ perspective: "2000px" }}
       >
         <div className="absolute inset-x-4 bottom-[-16px] h-20 bg-blue-900 rounded-[3rem] opacity-0 blur-sm" />
         <div className="absolute inset-x-1 bottom-[-8px] h-full bg-blue-800 rounded-[3.5rem] shadow-lg" />
 
         <div className="relative w-full h-full bg-blue-600 rounded-[3.5rem] overflow-hidden shadow-xl flex flex-col">
+          
           {/* TOP HALF BACKGROUND - Added bg-blue-700 for contrast */}
           <div
             onClick={() => handleFlip("prev")}
             className="relative flex-1 bg-blue-700 flex flex-col items-center justify-end overflow-hidden z-10"
           >
-            <div className="flex flex-col items-center">
-              <span className="text-white text-4xl font-extralight tracking-tight mb-2">
+            <div className="absolute top-1/2 left-0 right-0 flex justify-center -translate-y-12">
+              <span className="text-white/60 text-4xl font-base tracking-wide">
                 {isFlipping && direction === "prev" ? targetDay : currDay}
               </span>
-              <div className="text-[11rem] font-extralight text-white leading-none translate-y-[50%]">
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-[9rem] font-extralight text-white leading-none translate-y-[50%]">
                 {isFlipping && direction === "prev" ? targetNum : currNum}
               </div>
             </div>
           </div>
 
-          <div className="h-px w-full bg-black z-20" />
+          <div className="h-px w-full bg-black/40 z-20 shadow-[0_0_20px_rgba(0,0,0,0.5),0_0_10px_rgba(0,0,0,0.3)]" />
 
           {/* BOTTOM HALF BACKGROUND - Kept bg-blue-600 */}
           <div
@@ -107,7 +110,7 @@ export const FlipCalendar = () => {
             className="relative flex-1 bg-blue-600 flex flex-col items-center justify-start overflow-hidden"
           >
             <div>
-              <div className="text-[11rem] font-extralight text-white leading-none -translate-y-[50%]">
+              <div className="text-[9rem] font-extralight text-white leading-none -translate-y-[50%]">
                 {isFlipping && direction === "next" ? targetNum : currNum}
               </div>
             </div>
@@ -124,19 +127,19 @@ export const FlipCalendar = () => {
                   : "rotateX(0deg)",
               transition:
                 isFlipping && direction === "next"
-                  ? "transform 1500ms cubic-bezier(0.4, 0, 0.2, 1)"
+                  ? "transform 2000ms cubic-bezier(0.4, 0, 0.2, 1)"
                   : "none",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
             }}
           >
             <div className="flex flex-col items-center justify-start h-full">
-              <div className="text-[11rem] font-extralight text-white leading-none -translate-y-[50%]">
+              <div className="text-[9rem] font-extralight text-white leading-none -translate-y-[50%]">
                 {currNum}
               </div>
             </div>
             {/* Shading overlay */}
-            <div className={`absolute inset-0 bg-black/20 transition-opacity duration-700 ${isFlipping ? 'opacity-100' : 'opacity-0'}`} />
+            <div className={`absolute inset-0 bg-gradient-to-b from-black/40 to-black/10 transition-opacity duration-1000 ${isFlipping ? 'opacity-100' : 'opacity-0'}`} />
           </div>
 
           <div
@@ -149,17 +152,19 @@ export const FlipCalendar = () => {
                   : "rotateX(180deg)",
               transition:
                 isFlipping && direction === "next"
-                  ? "transform 1500ms cubic-bezier(0.4, 0, 0.2, 1)"
+                  ? "transform 2000ms cubic-bezier(0.4, 0, 0.2, 1)"
                   : "none",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
             }}
           >
-            <div className="flex flex-col items-center justify-end h-full">
-              <span className="text-white text-4xl font-extralight tracking-tight mb-2">
+            <div className="absolute top-1/2 left-0 right-0 flex justify-center -translate-y-12">
+              <span className="text-white/60 text-4xl font-base tracking-wide">
                 {targetDay}
               </span>
-              <div className="text-[11rem] font-extralight text-white leading-none translate-y-[50%]">
+            </div>
+            <div className="flex flex-col items-center justify-end h-full">
+              <div className="text-[9rem] font-extralight text-white leading-none translate-y-[50%]">
                 {targetNum}
               </div>
             </div>
@@ -176,22 +181,24 @@ export const FlipCalendar = () => {
                   : "rotateX(0deg)",
               transition:
                 isFlipping && direction === "prev"
-                  ? "transform 1500ms cubic-bezier(0.4, 0, 0.2, 1)"
+                  ? "transform 2000ms cubic-bezier(0.4, 0, 0.2, 1)"
                   : "none",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
             }}
           >
-            <div className="flex flex-col items-center justify-end h-full">
-              <span className="text-white text-4xl font-extralight tracking-tight mb-2">
+            <div className="absolute top-1/2 left-0 right-0 flex justify-center -translate-y-12">
+              <span className="text-white/60 text-4xl font-light tracking-wide uppercase">
                 {currDay}
               </span>
-              <div className="text-[11rem] font-extralight text-white leading-none translate-y-[50%]">
+            </div>
+            <div className="flex flex-col items-center justify-end h-full">
+              <div className="text-[9rem] font-extralight text-white leading-none translate-y-[50%]">
                 {currNum}
               </div>
             </div>
             {/* Shading overlay */}
-            <div className={`absolute inset-0 bg-black/20 transition-opacity duration-700 ${isFlipping ? 'opacity-100' : 'opacity-0'}`} />
+            <div className={`absolute inset-0 bg-gradient-to-t from-black/40 to-black/10 transition-opacity duration-1000 ${isFlipping ? 'opacity-100' : 'opacity-0'}`} />
           </div>
 
           <div
@@ -204,14 +211,14 @@ export const FlipCalendar = () => {
                   : "rotateX(-180deg)",
               transition:
                 isFlipping && direction === "prev"
-                  ? "transform 1500ms cubic-bezier(0.4, 0, 0.2, 1)"
+                  ? "transform 2000ms cubic-bezier(0.4, 0, 0.2, 1)"
                   : "none",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
             }}
           >
             <div className="flex flex-col items-center justify-start h-full">
-              <div className="text-[11rem] font-extralight text-white leading-none -translate-y-[50%]">
+              <div className="text-[9rem] font-extralight text-white leading-none -translate-y-[50%]">
                 {targetNum}
               </div>
             </div>
