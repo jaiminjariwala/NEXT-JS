@@ -27,9 +27,50 @@
 }
 
 /* Ensure syntax highlighter background is transparent */
-.codeTransparent,
+.codeTransparent {
+  background: transparent !important;
+}
+
 .codeTransparent pre,
+.codeTransparent pre[class*="language-"] {
+  background: transparent !important;
+  position: relative;
+  /* Vertical indent guide lines */
+  background-image: 
+    linear-gradient(to right, rgba(200, 200, 200, 0.3) 1px, transparent 1px);
+  background-size: 2ch 100%;
+  background-position: 4em 0;
+  background-repeat: repeat-x;
+}
+
 .codeTransparent code,
 .codeTransparent span {
   background: transparent !important;
+}
+
+/* Fix line numbers to be non-italic */
+.codeTransparent .react-syntax-highlighter-line-number {
+  font-style: normal !important;
+}
+
+.codeTransparent span.linenumber,
+.codeTransparent span[class*="linenumber"],
+.codeTransparent .linenumber {
+  font-style: normal !important;
+}
+
+/* Override any italic styling on line numbers */
+.codeTransparent pre span:first-child {
+  font-style: normal !important;
+}
+
+/* Scrollable code area - prevent dragging inside */
+.scrollableCodeArea {
+  touch-action: pan-y pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Component preview - prevent dragging inside */
+.componentPreview {
+  touch-action: auto;
 }

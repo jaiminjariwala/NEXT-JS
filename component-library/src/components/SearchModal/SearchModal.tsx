@@ -54,11 +54,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const footer = (
     <>
       <span className="flex items-center gap-2">
-        <kbd className="px-2.5 py-1.5 bg-white/40 rounded-lg border border-white/50 font-mono text-[10px] font-medium">ESC</kbd>
+        <kbd className="px-2.5 py-1.5 bg-white/40 rounded-lg border border-white/50 font-mono text-[10px] font-medium">
+          ESC
+        </kbd>
         <span>to close</span>
       </span>
       <span className="flex items-center gap-2">
-        <kbd className="px-2.5 py-1.5 bg-white/40 rounded-lg border border-white/50 font-mono text-[10px] font-medium">↵</kbd>
+        <kbd className="px-2.5 py-1.5 bg-white/40 rounded-lg border border-white/50 font-mono text-[10px] font-medium">
+          ↵
+        </kbd>
         <span>to select</span>
       </span>
     </>
@@ -73,7 +77,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       footer={footer}
       showHeader={false}
       shouldPreventDrag={(target) => {
-        return !!target.closest('button') || !!target.closest('input');
+        return !!target.closest("button") || !!target.closest("input");
       }}
     >
       {/* Search Input */}
@@ -111,26 +115,32 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 No components found
               </div>
             ) : (
-              <div className="p-3">
+              <div className="p-3 pb-6">
                 {filteredItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/50 transition-all duration-200 flex items-center justify-between group active:scale-[0.98]"
-                  >
-                    <div>
-                      <div className="font-semibold text-gray-800 text-base">
-                        {item.name}
+                  <div key={item.id} className="flex flex-col gap-2">
+                    {/* Button */}
+                    <button
+                      onClick={() => handleItemClick(item)}
+                      className="w-full text-left px-5 py-4 rounded-2xl hover:bg-white/50 transition-all duration-200 flex items-center justify-between group active:scale-[0.98] mt-2"
+                    >
+                      <div>
+                        <div className="font-semibold text-gray-800 text-base">
+                          {item.name}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-0.5">
+                          {item.category}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500 mt-0.5">
-                        {item.category}
-                      </div>
-                    </div>
-                    <ArrowUp
-                      size={16}
-                      className="text-gray-400 group-hover:text-black rotate-45 transition-colors"
-                    />
-                  </button>
+
+                      <ArrowUp
+                        size={16}
+                        className="text-gray-400 group-hover:text-black rotate-45 transition-colors"
+                      />
+                    </button>
+
+                    {/* Separator */}
+                    <span className="h-px w-full bg-black/10" />
+                  </div>
                 ))}
               </div>
             )}
