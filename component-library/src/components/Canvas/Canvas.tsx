@@ -5,73 +5,42 @@ import { DraggableItem } from "../DraggableItem/DraggableItem";
 import { CodeModal } from "../CodeModal/CodeModal";
 import { showcaseItems } from "@/data/componentsData";
 import { ShowcaseItem } from "@/types";
+import { organizeGridLayout } from "@/utils/layoutUtils";
 
 interface CanvasProps {
   highlightedItemId?: string | null;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
-  // Initialize component positions - start with empty array to avoid hydration mismatch
   const [items, setItems] = useState<
     Array<{ id: string; position: { x: number; y: number } }>
   >([]);
-
-  // Set initial positions only on client side
+  // Set initial positions using smart layout
   useEffect(() => {
-    const viewportWidth = window.innerWidth;
-    const isMobile = viewportWidth < 768;
-    const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-
-    // Component dimensions (approximate)
-    const componentWidth = 320; // Adjust based on your largest component
-    const componentHeight = 320;
-    const gap = 20; // Gap between components
-
-    // Calculate how many components fit per row based on viewport
-    let componentsPerRow;
-    if (isMobile) {
-      componentsPerRow = 1;
-    } else if (isTablet) {
-      componentsPerRow = Math.floor((viewportWidth - 280) / (componentWidth + gap)); // 280 is sidebar width
-    } else {
-      componentsPerRow = Math.floor((viewportWidth - 280) / (componentWidth + gap));
-    }
-
-    componentsPerRow = Math.max(1, componentsPerRow); // Ensure at least 1 per row
-
-    const initialItems = showcaseItems.map((item, index) => {
-      const row = Math.floor(index / componentsPerRow);
-      const col = index % componentsPerRow;
-
-      return {
-        id: item.id,
-        position: {
-          x: gap + col * (componentWidth + gap),
-          y: gap + row * (componentHeight + gap),
-        },
-      };
-    });
-
-    // Use startTransition to mark this as a non-urgent update
-    startTransition(() => {
-      setItems(initialItems);
-    });
+    // Account for sidebar width (200px on desktop, 0 on mobile)
+    const sidebarWidth = window.innerWidth >= 768 ? 200 : 0;
+    const viewportWidth = window.innerWidth - sidebarWidth;
+    const viewportHeight = window.innerHeight;
+    
+    console.log('Canvas dimensions:', { viewportWidth, sidebarWidth, totalWidth: window.innerWidth });
+    
+    const positions = organizeGridLayout(showcaseItems, viewportWidth, viewportHeight);
+    
+    console.log('Organizing layout:', positions);
+    setItems(positions);
   }, []);
 
   const [selectedItem, setSelectedItem] = useState<ShowcaseItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Zoom and pan state
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
 
-  // Refs for canvas interaction
   const canvasRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
 
-  // Update item position after drag
   const handlePositionUpdate = (
     id: string,
     newPosition: { x: number; y: number }
@@ -83,17 +52,25 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
     );
   };
 
-  // Open code modal when item is clicked
   const handleItemClick = (item: ShowcaseItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
 
-  // Refs to track current scale and pan for wheel handler
+  const handleReorganize = () => {
+    // Account for sidebar width (200px on desktop, 0 on mobile)
+    const sidebarWidth = window.innerWidth >= 768 ? 200 : 0;
+    const viewportWidth = window.innerWidth - sidebarWidth;
+    const viewportHeight = window.innerHeight;
+    
+    const positions = organizeGridLayout(showcaseItems, viewportWidth, viewportHeight);
+    
+    setItems(positions);
+  };
+
   const scaleRef = useRef(scale);
   const panRef = useRef(pan);
 
-  // Keep refs in sync with state
   useEffect(() => {
     scaleRef.current = scale;
   }, [scale]);
@@ -102,7 +79,6 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
     panRef.current = pan;
   }, [pan]);
 
-  // Handle zoom with Ctrl/Cmd + Mouse Wheel - Figma-like zoom towards cursor
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -111,24 +87,19 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Get mouse position relative to canvas
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // Use refs to get current values
         const currentScale = scaleRef.current;
         const currentPan = panRef.current;
 
-        // Calculate the point in canvas space (before zoom)
         const pointX = (mouseX - currentPan.x) / currentScale;
         const pointY = (mouseY - currentPan.y) / currentScale;
 
-        // Calculate new scale
         const delta = e.deltaY * -0.01;
         const newScale = Math.min(Math.max(0.1, currentScale + delta), 3);
 
-        // Calculate new pan to keep the point under cursor
         const newPanX = mouseX - pointX * newScale;
         const newPanY = mouseY - pointY * newScale;
 
@@ -144,7 +115,6 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
     return () => canvas?.removeEventListener("wheel", handleWheel);
   }, []);
 
-  // Handle canvas panning - Figma-like behavior
   useEffect(() => {
     const getEventCoordinates = (e: MouseEvent | TouchEvent) => {
       if ("touches" in e && e.touches[0]) {
@@ -154,22 +124,17 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      // Don't pan if an item is being dragged
       if (canvasRef.current?.hasAttribute("data-item-dragging")) {
         return;
       }
 
-      // Only pan on left click, middle click, or Shift + left click
-      // Don't pan if clicking on a draggable item
       const target = e.target as HTMLElement;
       const isDraggableItem = target.closest("[data-draggable-item]");
 
       if (isDraggableItem) {
-        // Let the draggable item handle the drag
         return;
       }
 
-      // Start panning on middle click, Shift + left click, or left click on empty space
       if (
         e.button === 1 ||
         (e.button === 0 && e.shiftKey) ||
@@ -184,12 +149,10 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
     };
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Don't pan if an item is being dragged
       if (canvasRef.current?.hasAttribute("data-item-dragging")) {
         return;
       }
 
-      // Don't pan if touching a draggable item
       const target = e.target as HTMLElement;
       const isDraggableItem = target.closest("[data-draggable-item]");
 
@@ -255,35 +218,40 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
           backgroundSize: "24px 24px",
         }}
       >
-        {/* Zoom controls - top right corner */}
-        <div className="absolute top-10 md:top-4 right-4 z-10 flex flex-row bg-white rounded items-center">
-          <button
-            onClick={() => setScale((prev) => Math.min(prev + 0.1, 3))}
-            className="px-4 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-xl font-light"
-          >
-            +
-          </button>
-          <span className="px-2 py-0.5 text-sm font-medium">
-            {Math.round(scale * 100)}%
-          </span>
-          <button
-            onClick={() => setScale((prev) => Math.max(prev - 0.1, 0.1))}
-            className="px-4 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-xl font-light"
-          >
-            -
-          </button>
-          <button
-            onClick={() => {
-              setScale(1);
-              setPan({ x: 0, y: 0 });
-            }}
-            className="px-4 py-1.5 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-sm font-medium text-black"
-          >
-            Reset
-          </button>
+        <div className="absolute top-10 md:top-4 right-4 z-10">
+          {/* Zoom Controls */}
+          <div className="flex flex-row bg-white rounded items-center shadow-md">
+            <button
+              onClick={() => setScale((prev) => Math.min(prev + 0.1, 3))}
+              className="px-4 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-xl font-light"
+              title="Zoom In"
+            >
+              +
+            </button>
+            <span className="px-2 py-0.5 text-sm font-medium">
+              {Math.round(scale * 100)}%
+            </span>
+            <button
+              onClick={() => setScale((prev) => Math.max(prev - 0.1, 0.1))}
+              className="px-4 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-xl font-light"
+              title="Zoom Out"
+            >
+              -
+            </button>
+            <button
+              onClick={() => {
+                setScale(1);
+                setPan({ x: 0, y: 0 });
+                handleReorganize();
+              }}
+              className="px-4 py-1.5 hover:bg-[#000000] hover:text-white rounded-xs transition-colors text-sm font-medium text-black"
+              title="Reset View & Reorganize Layout"
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
-        {/* Canvas with zoom and pan */}
         <div
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
@@ -293,7 +261,6 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
             position: "relative",
           }}
         >
-          {/* Render all draggable items */}
           {items.map((item) => {
             const showcaseItem = showcaseItems.find((s) => s.id === item.id);
             if (!showcaseItem) return null;
@@ -317,14 +284,13 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
         </div>
       </div>
 
-      {/* Code modal */}
       {selectedItem && (
         <CodeModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           code={selectedItem.code}
           componentName={selectedItem.name}
-          component={selectedItem.component}
+          component={selectedItem.hidePreview ? undefined : selectedItem.component}
         />
       )}
     </>

@@ -37,9 +37,8 @@ export const Sidebar: React.FC<NavbarProps> = ({ onSearchClick }) => {
           <div className="bg-[#d8eff9]">
             <div className="mx-3 my-3">
               <h1 className="pl-1.5 text-3xl font-base tracking-tight text-black">
-                Jaimin<br />
-                Designed<br />
-                Components
+                Component<br />
+                Library
               </h1>
             </div>
           </div>

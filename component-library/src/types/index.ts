@@ -7,4 +7,5 @@ export interface ShowcaseItem {
     tsx: string;
     css: string;
   };
+  hidePreview?: boolean;
 }
