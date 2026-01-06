@@ -26,11 +26,41 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   component: Component,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [activeView, setActiveView] = useState<'preview' | 'code'>('preview');
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code.tsx);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Handle scroll to detect which view is active
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const scrollLeft = scrollContainerRef.current.scrollLeft;
+    const width = scrollContainerRef.current.offsetWidth;
+    
+    // Determine which view is active based on scroll position
+    if (scrollLeft < width / 2) {
+      setActiveView('preview');
+    } else {
+      setActiveView('code');
+    }
+  };
+
+  // Scroll to specific view
+  const scrollToView = (view: 'preview' | 'code') => {
+    if (!scrollContainerRef.current) return;
+    
+    const width = scrollContainerRef.current.offsetWidth;
+    const scrollLeft = view === 'preview' ? 0 : width;
+    
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -50,13 +80,40 @@ export const CodeModal: React.FC<CodeModalProps> = ({
     >
       <div className="flex-1 px-6 pb-6 z-10 relative" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         
-        {/* Horizontal Layout on Desktop, Vertical on Mobile */}
-        <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+        {/* Mobile View Indicators */}
+        {Component && (
+          <div className="md:hidden flex justify-center gap-2 mb-4">
+            <button
+              onClick={() => scrollToView('preview')}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                activeView === 'preview' ? 'bg-black w-6' : 'bg-gray-300'
+              }`}
+              aria-label="View preview"
+            />
+            <button
+              onClick={() => scrollToView('code')}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                activeView === 'code' ? 'bg-black w-6' : 'bg-gray-300'
+              }`}
+              aria-label="View code"
+            />
+          </div>
+        )}
+        
+        {/* Horizontal Layout on Desktop, Swipeable Horizontal Scroll on Mobile */}
+        <div 
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className={`flex flex-row md:gap-4 h-full min-h-0 md:overflow-x-visible snap-x snap-mandatory scroll-smooth ${styles.hideScrollbar}`}
+          style={{
+            overflowX: 'auto',
+          }}
+        >
           
           {/* Component Preview Section */}
           {Component && (
             <div 
-              className={`${styles.componentPreview} w-full md:w-1/2`}
+              className={`${styles.componentPreview} ${styles.mobileFullWidth}`}
               style={{ 
                 position: 'relative',
                 borderRadius: '32px',
@@ -68,6 +125,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: '240px',
+                scrollSnapAlign: 'start',
               }}
             >
               {/* Preview Label */}
@@ -86,7 +144,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
 
           {/* Code Section */}
           <div 
-            className={`w-full ${Component ? 'md:w-1/2' : 'md:w-full'}`}
+            className={`${styles.mobileFullWidth}`}
             style={{ 
               position: 'relative',
               flex: 1,
@@ -96,7 +154,8 @@ export const CodeModal: React.FC<CodeModalProps> = ({
               border: '1px solid rgba(255, 255, 255, 0.4)',
               boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.03)',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              scrollSnapAlign: 'start',
             }}
           >
             

@@ -26,6 +26,30 @@
   background: transparent;
 }
 
+/* Hide horizontal scrollbar for mobile swipe */
+.hideScrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hideScrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Mobile full-width sections */
+.mobileFullWidth {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* Desktop: side by side with gap */
+@media (min-width: 768px) {
+  .mobileFullWidth {
+    width: 50%;
+    flex-shrink: 1;
+  }
+}
+
 /* Ensure syntax highlighter background is transparent */
 .codeTransparent {
   background: transparent !important;
