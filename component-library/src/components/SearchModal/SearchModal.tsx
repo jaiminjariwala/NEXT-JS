@@ -25,7 +25,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   // Filter components based on search query
   const filteredItems = useMemo(() => {
     if (searchQuery.trim() === "") {
-      return showcaseItems;
+      // Show only Folder and Flip Calendar initially
+      return showcaseItems.filter(
+        (item) => item.id === "folder-1" || item.id === "flip-calendar-1"
+      );
     }
     const query = searchQuery.toLowerCase();
     return showcaseItems.filter(
