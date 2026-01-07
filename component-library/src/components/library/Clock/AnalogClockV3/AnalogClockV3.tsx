@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 
-export const AnalogClock = () => {
+export const AnalogClockV3 = () => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -64,20 +64,12 @@ export const AnalogClock = () => {
     return cityMap[userTimeZone] || 'UTC';
   }, []);
 
-  const { dcDate, offsetLabel } = useMemo(() => {
+  const { dcDate } = useMemo(() => {
     const dcString = time.toLocaleString("en-US", { timeZone: "America/New_York" });
     const dcDate = new Date(dcString);
     
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      timeZoneName: 'shortOffset'
-    });
-    const parts = formatter.formatToParts(time);
-    const offset = parts.find(p => p.type === 'timeZoneName')?.value || "";
-    
     return { 
-      dcDate, 
-      offsetLabel: offset.replace('GMT', '') 
+      dcDate
     };
   }, [time]);
 
@@ -98,7 +90,7 @@ export const AnalogClock = () => {
           key={i}
           x1="100" y1={isHour ? 5 : 5}
           x2="100" y2={isHour ? 17 : 13}
-          stroke={isHour ? "#FFFFFF" : "#525252"}
+          stroke={isHour ? "#1a1a1a" : "#333333"}
           strokeWidth={isHour ? 2.8 : 1.2}
           strokeLinecap="round"
           transform={`rotate(${i * 6} 100 100)`}
@@ -111,26 +103,27 @@ export const AnalogClock = () => {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '320px'}}>
       <div style={{
         width: '320px', height: '320px',
-        background: 'linear-gradient(145deg, #2c2c2c, #1a1a1a)',
+        background: 'linear-gradient(145deg, #d4d9dd, #c5cace)',
         borderRadius: '64px', padding: '18px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
       }}>
         <div style={{
           width: '100%', height: '100%',
-          backgroundColor: '#000000', borderRadius: '50%',
+          backgroundColor: '#f5f5f7', borderRadius: '50%',
           position: 'relative', overflow: 'hidden',
-          boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.9)'
+          boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
             <defs>
-              <filter id="handShadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.6" />
+              <filter id="handShadowV3" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodOpacity="0.3" />
               </filter>
             </defs>
 
             <g>{ticks}</g>
 
-            <text x="100" y="75" textAnchor="middle" fill="#525252" 
+            <text x="100" y="75" textAnchor="middle" fill="#999999" 
               style={{ fontSize: '26px', fontWeight: '800', fontFamily: 'system-ui, sans-serif' }}>{cityAbbreviation}</text>
 
             {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((num, i) => {
@@ -138,32 +131,28 @@ export const AnalogClock = () => {
               const x = 100 + Math.sin(angle) * 68;
               const y = 100 - Math.cos(angle) * 68;
               return (
-                <text key={num} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fill="white" 
+                <text key={num} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fill="#1a1a1a" 
                   style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'system-ui, sans-serif' }}>{num}</text>
               );
             })}
 
-            {/* --- IMPROVED HOUR HAND (2 segments) --- */}
-            <g transform={`rotate(${hourAngle} 100 100)`} filter="url(#handShadow)">
-              {/* Thin Neck near center */}
-              <rect x="98.5" y="90" width="3" height="12" rx="1.5" fill="white" />
-              {/* Thicker Body outward */}
-              <rect x="96" y="46" width="8" height="47" rx="5" fill="white" />
+            {/* Hour hand - black */}
+            <g transform={`rotate(${hourAngle} 100 100)`} filter="url(#handShadowV3)">
+              <rect x="98.5" y="90" width="3" height="12" rx="1.5" fill="#1a1a1a" />
+              <rect x="96" y="46" width="8" height="47" rx="5" fill="#1a1a1a" />
             </g>
 
-            {/* --- IMPROVED MINUTE HAND (2 segments) --- */}
-            <g transform={`rotate(${minuteAngle} 100 100)`} filter="url(#handShadow)">
-              {/* Thin Neck near center */}
-              <rect x="99" y="88" width="2" height="15" rx="1" fill="white" />
-              {/* Thicker Body outward */}
-              <rect x="97" y="20" width="6" height="72" rx="3" fill="white" />
+            {/* Minute hand - black */}
+            <g transform={`rotate(${minuteAngle} 100 100)`} filter="url(#handShadowV3)">
+              <rect x="99" y="88" width="2" height="15" rx="1" fill="#1a1a1a" />
+              <rect x="97" y="20" width="6" height="72" rx="3" fill="#1a1a1a" />
             </g>
 
-            {/* --- SECOND HAND (ORANGE) --- */}
+            {/* Second hand - orange */}
             <g transform={`rotate(${secondAngle} 100 100)`}>
               <line x1="100" y1="115" x2="100" y2="18" stroke="#FF9500" strokeWidth="2" strokeLinecap="round" />
               <circle cx="100" cy="100" r="3.5" fill="#FF9500" />
-              <circle cx="100" cy="100" r="1.5" fill="black" />
+              <circle cx="100" cy="100" r="1.5" fill="#f5f5f7" />
             </g>
           </svg>
         </div>
