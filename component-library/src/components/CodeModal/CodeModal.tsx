@@ -1,11 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, ChevronDown } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { BaseModal } from "@/components/BaseModal";
 import styles from "./CodeModal.module.css";
+
+interface ComponentVersion {
+  id: string;
+  name: string;
+  component: React.ComponentType;
+  code: {
+    tsx: string;
+    css: string;
+  };
+}
 
 interface CodeModalProps {
   isOpen: boolean;
@@ -16,6 +26,7 @@ interface CodeModalProps {
   };
   componentName: string;
   component?: React.ComponentType;
+  versions?: ComponentVersion[];
 }
 
 export const CodeModal: React.FC<CodeModalProps> = ({
@@ -24,13 +35,25 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   code,
   componentName,
   component: Component,
+  versions,
 }) => {
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState<'preview' | 'code'>('preview');
+  const [selectedVersion, setSelectedVersion] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
+  // Debug log
+  console.log('CodeModal versions:', versions);
+  console.log('Versions length:', versions?.length);
+
+  // Get current version data
+  const currentVersion = versions && versions.length > 0 ? versions[selectedVersion] : null;
+  const displayComponent = currentVersion?.component || Component;
+  const displayCode = currentVersion?.code || code;
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code.tsx);
+    await navigator.clipboard.writeText(displayCode.tsx);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -63,6 +86,12 @@ export const CodeModal: React.FC<CodeModalProps> = ({
     });
   };
 
+  const handleVersionChange = (index: number) => {
+    setSelectedVersion(index);
+    setIsDropdownOpen(false);
+    setCopied(false);
+  };
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -81,7 +110,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
       <div className="flex-1 px-6 pb-6 z-10 relative" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         
         {/* Mobile View Indicators */}
-        {Component && (
+        {displayComponent && (
           <div className="md:hidden flex justify-center gap-2 mb-4">
             <button
               onClick={() => scrollToView('preview')}
@@ -111,7 +140,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
         >
           
           {/* Component Preview Section */}
-          {Component && (
+          {displayComponent && (
             <div 
               className={`${styles.componentPreview} ${styles.mobileFullWidth}`}
               style={{ 
@@ -128,16 +157,64 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                 scrollSnapAlign: 'start',
               }}
             >
-              {/* Preview Label */}
-              <div className="absolute top-4 left-6 z-30">
+              {/* Preview Label and Version Selector */}
+              <div className="absolute top-4 left-6 z-30 flex items-center gap-3">
                 <span className="px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black">
                   preview
                 </span>
+                
+                {/* Version Dropdown */}
+                {versions && versions.length > 1 && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black hover:bg-white/90 transition-colors"
+                    >
+                      {currentVersion?.name || `v${selectedVersion + 1}`}
+                      <ChevronDown 
+                        size={12} 
+                        className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    
+                    {isDropdownOpen && (
+                      <>
+                        {/* Backdrop to close dropdown */}
+                        <div 
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsDropdownOpen(false)}
+                        />
+                        
+                        {/* Dropdown Menu */}
+                        <div className="absolute top-full left-0 mt-2 bg-white/90 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 overflow-hidden z-50 min-w-[140px]">
+                          {versions.map((version, index) => (
+                            <button
+                              key={version.id}
+                              onClick={() => handleVersionChange(index)}
+                              className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-all duration-200 ${
+                                selectedVersion === index
+                                  ? 'bg-gray-100/80 text-black'
+                                  : 'bg-transparent text-gray-700 hover:bg-gray-50/50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{version.name}</span>
+                                {selectedVersion === index && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-black ml-2" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Live Component */}
               <div className="scale-70 origin-center">
-                <Component />
+                {React.createElement(displayComponent)}
               </div>
             </div>
           )}
@@ -214,7 +291,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                   }}
                   className={styles.codeTransparent}
                 >
-                  {code.tsx}
+                  {displayCode.tsx}
                 </SyntaxHighlighter>
               </div>
             </div>

@@ -291,6 +291,7 @@ export const Canvas: React.FC<CanvasProps> = ({ highlightedItemId }) => {
           code={selectedItem.code}
           componentName={selectedItem.name}
           component={selectedItem.hidePreview ? undefined : selectedItem.component}
+          versions={selectedItem.versions}
         />
       )}
     </>
