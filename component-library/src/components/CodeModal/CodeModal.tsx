@@ -43,10 +43,6 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Debug log
-  console.log('CodeModal versions:', versions);
-  console.log('Versions length:', versions?.length);
-
   // Get current version data
   const currentVersion = versions && versions.length > 0 ? versions[selectedVersion] : null;
   const displayComponent = currentVersion?.component || Component;

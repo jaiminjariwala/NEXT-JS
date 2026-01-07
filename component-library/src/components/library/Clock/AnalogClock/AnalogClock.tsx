@@ -13,7 +13,7 @@ export const AnalogClock = () => {
   const cityAbbreviation = useMemo(() => {
     const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    const cityMap = {
+    const cityMap: Record<string, string> = {
       'America/New_York': 'NYC',
       'America/Los_Angeles': 'LA',
       'America/Chicago': 'CHI',
