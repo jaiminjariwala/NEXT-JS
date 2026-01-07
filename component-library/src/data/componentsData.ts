@@ -1,9 +1,11 @@
 import { ShowcaseItem } from "@/types";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
+import { AnalogClockV2 } from "@/components/library/Clock/AnalogClockV2/AnalogClockV2";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCalendar";
 import Card1 from "@/components/library/Card/Card1";
 import Folder1 from "@/components/library/Folder/Folder1";
+import { analogClockVersions } from "@/data/versions/analogClockVersions";
 
 export const showcaseItems: ShowcaseItem[] = [
   {
@@ -93,6 +95,7 @@ export const AnalogClock = () => {
 };`,
       css: `/* No external CSS needed - uses Tailwind classes */`,
     },
+    versions: analogClockVersions,
   },
   {
     id: "date-calendar-1",

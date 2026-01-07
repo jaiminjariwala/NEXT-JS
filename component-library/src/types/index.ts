@@ -1,3 +1,13 @@
+export interface ComponentVersion {
+  id: string;
+  name: string;
+  component: React.ComponentType;
+  code: {
+    tsx: string;
+    css: string;
+  };
+}
+
 export interface ShowcaseItem {
   id: string;
   name: string;
@@ -8,4 +18,5 @@ export interface ShowcaseItem {
     css: string;
   };
   hidePreview?: boolean;
+  versions?: ComponentVersion[];
 }
