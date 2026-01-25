@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mern-thinkboard
+    env: node
+    buildCommand: npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: PORT
+        value: 10000
