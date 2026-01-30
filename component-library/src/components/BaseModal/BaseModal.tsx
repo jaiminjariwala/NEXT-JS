@@ -114,7 +114,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             className={`
               w-full ${maxWidth} ${maxHeight} flex flex-col
               rounded-[40px] overflow-hidden
-              bg-white/60 backdrop-blur-3xl
+              bg-white
               border border-white/80
               shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1),0_0_40px_rgba(180,220,255,0.3),inset_0_2px_4px_rgba(255,255,255,1),inset_0_-10px_20px_rgba(255,255,255,0.5)]
               z-10

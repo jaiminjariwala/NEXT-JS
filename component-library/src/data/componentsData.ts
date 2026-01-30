@@ -5,7 +5,9 @@ import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCal
 import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCalendar";
 import Card1 from "@/components/library/Card/Card1";
 import Folder1 from "@/components/library/Folder/Folder1";
+import Drawer1 from "@/components/library/Drawer/Drawer1";
 import { analogClockVersions } from "@/data/versions/analogClockVersions";
+import { cardVersions } from "@/data/versions/cardVersions";
 
 export const showcaseItems: ShowcaseItem[] = [
   {
@@ -364,7 +366,7 @@ export const FlipCalendar = () => {
   },
   {
     id: "card-1",
-    name: "Neubrutalism Card",
+    name: "Card",
     category: "Card",
     component: Card1,
     code: {
@@ -388,34 +390,34 @@ const Card1: React.FC<Card1Props> = ({
   onCancel,
 }) => {
   return (
-    <div className="inline-block p-8 bg-gradient-to-br from-green-200 to-green-400">
-      <div className="bg-white border-4 border-black rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 max-w-3xl">
+    <div className="inline-block">
+      <div className="bg-white border-4 border-black rounded-3xl shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] p-8 w-full sm:w-[700px]">
         {/* Title */}
-        <h1 className="text-6xl font-bold text-gray-900 mb-8">
+        <h1 className="text-4xl sm:text-6xl font-medium text-gray-900 mb-6 sm:mb-8">
           {title}
         </h1>
 
         {/* Content */}
-        <p className="text-gray-600 text-lg leading-relaxed mb-6">
+        <p className="text-gray-600 text-base sm:text-2xl leading-relaxed mb-4 sm:mb-6">
           {content}
         </p>
 
         {/* Footer */}
-        <p className="text-gray-600 text-lg mb-8">
+        <p className="text-gray-600 text-base sm:text-2xl mb-6 sm:mb-8">
           {footer}
         </p>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3 sm:gap-4">
           <button
             onClick={onCancel}
-            className="px-8 py-4 text-xl font-semibold text-gray-700 bg-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 active:shadow-none active:translate-x-[4px] active:translate-y-[4px]"
+            className="px-4 py-2 sm:px-6 sm:py-3 text-lg sm:text-2xl font-medium text-gray-700 bg-white border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 active:shadow-none active:translate-x-[4px] active:translate-y-[4px] hover:cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={onSave}
-            className="px-8 py-4 text-xl font-semibold text-white bg-green-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 active:shadow-none active:translate-x-[4px] active:translate-y-[4px]"
+            className="px-4 py-2 sm:px-6 sm:py-3 text-lg sm:text-2xl font-medium text-white bg-green-600 border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-150 active:shadow-none active:translate-x-[4px] active:translate-y-[4px] hover:cursor-pointer"
           >
             Save
           </button>
@@ -428,6 +430,7 @@ const Card1: React.FC<Card1Props> = ({
 export default Card1;`,
       css: `/* No external CSS needed - uses Tailwind classes */`,
     },
+    versions: cardVersions,
   },
   {
     id: "folder-1",
@@ -603,6 +606,121 @@ const styles: { [key: string]: React.CSSProperties } = {
 
 export default RefinedGlassFolder;`,
       css: `/* No external CSS needed - uses inline styles */`,
+    },
+  },
+  {
+    id: "drawer-1",
+    name: "Drawer",
+    category: "Drawer",
+    component: Drawer1,
+    code: {
+      tsx: `'use client';
+
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+
+interface DrawerProps {
+  buttonText?: string;
+  title?: string;
+  description?: string;
+}
+
+const Drawer1: React.FC<DrawerProps> = ({
+  buttonText = "Open Drawer",
+  title = "Drawer for React.",
+  description = "This component can be used as a Dialog replacement on mobile and tablet devices. You can read about why and how it was built here.\\n\\nIt comes unstyled, has gesture-driven animations, and is made by Emil Kowalski.\\n\\nIt uses Radix's Dialog primitive under the hood and is inspired by this tweet."
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const drawerContent = isOpen ? (
+    <div 
+      className="fixed inset-0 bg-black/40 z-[99999] transition-opacity duration-300"
+      style={{ position: 'fixed' }}
+      onClick={() => setIsOpen(false)}
+    >
+      {/* Drawer Content */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-2xl transform transition-transform duration-300 ease-out"
+        style={{
+          height: '40vh',
+          width: '100vw',
+          animation: 'slideUp 300ms ease-out',
+          position: 'fixed'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Drawer Handle */}
+        <div className="flex justify-center pt-4 pb-2">
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
+
+        {/* Close Button */}
+        <button
+          onClick={() => setIsOpen(false)}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+          aria-label="Close drawer"
+        >
+          <X size={20} className="text-gray-500" />
+        </button>
+
+        {/* Drawer Body - Centered */}
+        <div className="px-6 pb-8 pt-2 overflow-y-auto flex flex-col items-center justify-center" style={{ maxHeight: 'calc(40vh - 60px)' }}>
+          <div className="max-w-2xl">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              {title}
+            </h2>
+            
+            <div className="text-gray-600 text-base leading-relaxed space-y-4">
+              {description.split('\\n\\n').map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {/* Square Container with Drawer Button */}
+      <div className="w-80 h-80 bg-gray-100 rounded-3xl flex items-center justify-center">
+        <button
+          onClick={() => setIsOpen(true)}
+          className="px-8 py-4 bg-white border border-gray-300 rounded-full text-gray-900 font-semibold text-lg hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          {buttonText}
+        </button>
+      </div>
+
+      {/* Portal to render drawer at body level */}
+      {mounted && typeof document !== 'undefined' && drawerContent && createPortal(
+        drawerContent,
+        document.body
+      )}
+
+      <style jsx global>{\`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+      \`}</style>
+    </>
+  );
+};
+
+export default Drawer1;`,
+      css: `/* No external CSS needed - uses Tailwind classes */`,
     },
   },
 ];
