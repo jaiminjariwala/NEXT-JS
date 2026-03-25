@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
+export const ITEM_PREVIEW_SCALE = 0.7;
+
 interface DraggableItemProps {
   id: string;
   position: { x: number; y: number };
@@ -217,6 +219,7 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
     <div
       ref={itemRef}
       data-draggable-item
+      data-item-id={id}
       onMouseDown={handleMouseDown as unknown as React.MouseEventHandler<HTMLDivElement>}
       onTouchStart={handleTouchStart as unknown as React.TouchEventHandler<HTMLDivElement>}
       style={{
@@ -226,7 +229,7 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         touchAction: 'none',
-        transform: isDragging ? 'scale(0.735)' : 'scale(0.7)',
+        transform: isDragging ? `scale(${ITEM_PREVIEW_SCALE * 1.05})` : `scale(${ITEM_PREVIEW_SCALE})`,
         transformOrigin: 'top left',
         transition: isDragging ? 'transform 0.1s ease' : 'none',
       }}
