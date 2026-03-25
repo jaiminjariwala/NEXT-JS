@@ -94,7 +94,72 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.monacoEditorShell {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.monacoEditorShell :global(.monaco-editor),
+.monacoEditorShell :global(.monaco-editor-background),
+.monacoEditorShell :global(.margin),
+.monacoEditorShell :global(.monaco-editor .margin-view-overlays) {
+  background: transparent !important;
+}
+
+.previewStage {
+  position: absolute;
+  inset: 4.5rem 0.75rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.previewStaticContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--preview-scale, 0.7));
+  transform-origin: center;
+}
+
+.livePreviewContent {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--preview-scale, 0.7));
+  transform-origin: center;
+}
+
+.livePreviewError {
+  position: absolute;
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(220, 38, 38, 0.16);
+  color: #b91c1c;
+  font: 500 0.75rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 45%;
+}
+
 /* Component preview - prevent dragging inside */
 .componentPreview {
   touch-action: auto;
+}
+
+@media (max-width: 767px) {
+  .previewStage {
+    inset: 4.25rem 0.5rem 0.5rem;
+  }
 }

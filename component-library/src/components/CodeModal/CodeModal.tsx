@@ -1,33 +1,114 @@
 "use client";
 
-import React, { useState } from "react";
-import { Copy, Check, ChevronDown } from "lucide-react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import MonacoEditor, {
+  type BeforeMount as MonacoBeforeMount,
+  type OnMount as MonacoOnMount,
+} from "@monaco-editor/react";
+import * as LucideIcons from "lucide-react";
+import { LiveProvider, LivePreview, LiveError } from "react-live";
+import { createPortal } from "react-dom";
 import { BaseModal } from "@/components/BaseModal";
-import styles from "./CodeModal.module.css";
+import { showcaseItems } from "@/data/componentsData";
+import modalStyles from "./CodeModal.module.css";
 
 interface ComponentVersion {
   id: string;
   name: string;
   component: React.ComponentType;
-  code: {
-    tsx: string;
-    css: string;
-  };
+  code: { tsx: string; css: string };
 }
 
 interface CodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  code: {
-    tsx: string;
-    css: string;
-  };
+  code: { tsx: string; css: string };
   componentName: string;
   component?: React.ComponentType;
   versions?: ComponentVersion[];
 }
+
+const codeFontFamily =
+  '"JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace';
+const codeEditorPaddingTop = 72;
+const codeEditorPaddingBottom = 28;
+
+const { Copy, Check, ChevronDown, Pencil, ArrowLeft, X } = LucideIcons;
+const monacoThemeName = "component-library-light";
+
+const livePreviewScope = {
+  ...React,
+  React,
+  ...LucideIcons,
+  createPortal,
+  showcaseItems,
+  codeModalStyles: modalStyles,
+};
+
+function stripClientDirective(tsx: string): string {
+  return tsx
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      return (
+        !trimmed.startsWith("'use client'") &&
+        !trimmed.startsWith('"use client"')
+      );
+    })
+    .join("\n");
+}
+
+function stripImports(tsx: string): string {
+  return tsx
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("import "))
+    .join("\n");
+}
+
+function findRenderTarget(tsx: string): string | null {
+  const namedDefaultExport = tsx.match(
+    /export\s+default\s+function\s+([A-Z][A-Za-z0-9_]*)/
+  );
+  if (namedDefaultExport) return namedDefaultExport[1];
+
+  const namedExports = [
+    ...tsx.matchAll(/export\s+(?:const|function|class)\s+([A-Z][A-Za-z0-9_]*)/g),
+  ];
+  if (namedExports.length > 0) {
+    return namedExports[namedExports.length - 1][1];
+  }
+
+  const localDeclarations = [
+    ...tsx.matchAll(/(?:const|function|class)\s+([A-Z][A-Za-z0-9_]*)/g),
+  ];
+  return localDeclarations.length > 0
+    ? localDeclarations[localDeclarations.length - 1][1]
+    : null;
+}
+
+function buildLivePreviewCode(tsx: string): string | null {
+  const sanitizedTsx = stripImports(stripClientDirective(tsx));
+  const normalizedTsx = sanitizedTsx
+    .replace(/export\s+default\s+function\s+/g, "function ")
+    .replace(/export\s+default\s+class\s+/g, "class ")
+    .replace(/export\s+default\s+/g, "const __DefaultExport__ = ")
+    .replace(/export\s+const\s+/g, "const ")
+    .replace(/export\s+function\s+/g, "function ")
+    .replace(/export\s+class\s+/g, "class ")
+    .replace(/export\s+interface\s+/g, "interface ")
+    .replace(/export\s+type\s+/g, "type ")
+    .replace(/export\s+\{[^}]*\};?/g, "");
+
+  const renderTarget = normalizedTsx.includes("__DefaultExport__")
+    ? "__DefaultExport__"
+    : findRenderTarget(normalizedTsx);
+
+  if (!renderTarget) return null;
+
+  return `${normalizedTsx}\nrender(<${renderTarget} />);`;
+}
+
+// ─── Main CodeModal ───────────────────────────────────────────────────────────
 
 export const CodeModal: React.FC<CodeModalProps> = ({
   isOpen,
@@ -38,128 +119,248 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   versions,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeView, setActiveView] = useState<'preview' | 'code'>('preview');
+  const [activeView, setActiveView] = useState<"preview" | "code">("preview");
   const [selectedVersion, setSelectedVersion] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Get current version data
-  const currentVersion = versions && versions.length > 0 ? versions[selectedVersion] : null;
+  // ── Edit mode state ──
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedCode, setEditedCode] = useState(code.tsx);
+
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const monacoEditorRef = useRef<Parameters<MonacoOnMount>[0] | null>(null);
+
+  const currentVersion =
+    versions && versions.length > 0 ? versions[selectedVersion] : null;
   const displayComponent = currentVersion?.component || Component;
   const displayCode = currentVersion?.code || code;
+  const previewScale = componentName === "Figma Canvas" ? 0.9 : 0.7;
+  const livePreviewCode = useMemo(
+    () => buildLivePreviewCode(editedCode),
+    [editedCode]
+  );
+  const monacoModelPath = `${componentName
+    .toLowerCase()
+    .replace(/\s+/g, "-")}-${selectedVersion}.tsx`;
+  const codeEditorOptions = useMemo(
+    () => ({
+      automaticLayout: true,
+      minimap: { enabled: false },
+      lineNumbers: "on" as const,
+      lineNumbersMinChars: 3,
+      glyphMargin: false,
+      folding: false,
+      renderLineHighlight: "none" as const,
+      scrollBeyondLastLine: false,
+      overviewRulerBorder: false,
+      hideCursorInOverviewRuler: true,
+      fontFamily: codeFontFamily,
+      fontSize: 14,
+      lineHeight: 26,
+      wordWrap: "off" as const,
+      tabSize: 2,
+      insertSpaces: true,
+      stickyScroll: { enabled: false },
+      padding: {
+        top: codeEditorPaddingTop,
+        bottom: codeEditorPaddingBottom,
+      },
+      readOnly: !isEditMode,
+      domReadOnly: !isEditMode,
+      readOnlyMessage: { value: "" },
+      renderValidationDecorations: "off" as const,
+      quickSuggestions: isEditMode,
+      contextmenu: isEditMode,
+      scrollbar: {
+        verticalScrollbarSize: 10,
+        horizontalScrollbarSize: 10,
+      },
+    }),
+    [isEditMode]
+  );
+
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    requestAnimationFrame(() => {
+      monacoEditorRef.current?.focus();
+    });
+  }, [isEditMode]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(displayCode.tsx);
+    await navigator.clipboard.writeText(
+      isEditMode ? editedCode : displayCode.tsx
+    );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Handle scroll to detect which view is active
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
-    
     const scrollLeft = scrollContainerRef.current.scrollLeft;
     const width = scrollContainerRef.current.offsetWidth;
-    
-    // Determine which view is active based on scroll position
-    if (scrollLeft < width / 2) {
-      setActiveView('preview');
-    } else {
-      setActiveView('code');
-    }
+    setActiveView(scrollLeft < width / 2 ? "preview" : "code");
   };
 
-  // Scroll to specific view
-  const scrollToView = (view: 'preview' | 'code') => {
+  const scrollToView = (view: "preview" | "code") => {
     if (!scrollContainerRef.current) return;
-    
     const width = scrollContainerRef.current.offsetWidth;
-    const scrollLeft = view === 'preview' ? 0 : width;
-    
     scrollContainerRef.current.scrollTo({
-      left: scrollLeft,
-      behavior: 'smooth'
+      left: view === "preview" ? 0 : width,
+      behavior: "smooth",
     });
   };
 
   const handleVersionChange = (index: number) => {
+    const nextCode = versions?.[index]?.code || code;
     setSelectedVersion(index);
     setIsDropdownOpen(false);
     setCopied(false);
+    setIsEditMode(false);
+    setEditedCode(nextCode.tsx);
+  };
+
+  const toggleEditMode = () => {
+    setIsEditMode((currentMode) => !currentMode);
+  };
+
+  const handleEditorBeforeMount: MonacoBeforeMount = (monaco) => {
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      allowJs: true,
+      allowNonTsExtensions: true,
+      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+      target: monaco.languages.typescript.ScriptTarget.ES2020,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      esModuleInterop: true,
+      strict: false,
+      noEmit: true,
+    });
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+      noSemanticValidation: true,
+      noSuggestionDiagnostics: true,
+      noSyntaxValidation: true,
+    });
+    monaco.editor.defineTheme(monacoThemeName, {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "94A3B8", fontStyle: "italic" },
+        { token: "keyword", foreground: "C026D3" },
+        { token: "string", foreground: "16A34A" },
+        { token: "number", foreground: "EA580C" },
+        { token: "regexp", foreground: "0EA5E9" },
+        { token: "type.identifier", foreground: "0F766E" },
+        { token: "identifier", foreground: "0F172A" },
+        { token: "delimiter", foreground: "475569" },
+        { token: "delimiter.bracket", foreground: "334155" },
+        { token: "tag", foreground: "DC2626" },
+        { token: "attribute.name", foreground: "2563EB" },
+        { token: "attribute.value", foreground: "16A34A" },
+      ],
+      colors: {
+        "editor.background": "#00000000",
+        "editorGutter.background": "#00000000",
+        "editor.lineHighlightBackground": "#00000000",
+        "editor.lineHighlightBorder": "#00000000",
+        "editorLineNumber.foreground": "#999999",
+        "editorLineNumber.activeForeground": "#666666",
+        "editor.foreground": "#0F172A",
+        "editorCursor.foreground": "#111827",
+        "editor.selectionBackground": "#1118271f",
+        "editor.inactiveSelectionBackground": "#11182714",
+        "editorBracketMatch.background": "#E0F2FE",
+        "editorBracketMatch.border": "#7DD3FC",
+        "scrollbar.shadow": "#00000000",
+      },
+    });
+  };
+
+  const handleEditorMount: MonacoOnMount = (editor) => {
+    monacoEditorRef.current = editor;
+    if (isEditMode) {
+      editor.focus();
+    }
+  };
+
+  const handleModalClose = () => {
+    setCopied(false);
+    setIsDropdownOpen(false);
+    setIsEditMode(false);
+    setEditedCode(displayCode.tsx);
+    onClose();
   };
 
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={onClose}
-      title={componentName}
+      onClose={handleModalClose}
       maxWidth="max-w-7xl"
-      maxHeight="max-h-[90vh]"
+      maxHeight="h-[88vh] max-h-[90vh]"
       verticalPosition="center"
-      shouldPreventDrag={(target) => {
-        // Prevent drag on buttons, scrollable code area, and component preview
-        return !!target.closest('button') || 
-               !!target.closest(`.${styles.scrollableCodeArea}`) ||
-               !!target.closest(`.${styles.componentPreview}`);
-      }}
+      showHeader={false}
+      shouldPreventDrag={(target) =>
+        !!target.closest("button") ||
+        !!target.closest(`.${modalStyles.scrollableCodeArea}`) ||
+        !!target.closest(`.${modalStyles.componentPreview}`) ||
+        !!target.closest(`.${modalStyles.monacoEditorShell}`)
+      }
     >
-      <div className="flex-1 px-6 pb-6 z-10 relative" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        
-        {/* Mobile View Indicators */}
+      <div
+        className="flex-1 px-6 pt-6 pb-6 z-10 relative overflow-hidden"
+        style={{ minHeight: 0, display: "flex", flexDirection: "column" }}
+      >
+        {/* Mobile dots */}
         {displayComponent && (
           <div className="md:hidden flex justify-center gap-2 mb-4">
-            <button
-              onClick={() => scrollToView('preview')}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                activeView === 'preview' ? 'bg-black w-6' : 'bg-gray-300'
-              }`}
-              aria-label="View preview"
-            />
-            <button
-              onClick={() => scrollToView('code')}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                activeView === 'code' ? 'bg-black w-6' : 'bg-gray-300'
-              }`}
-              aria-label="View code"
-            />
+            {(["preview", "code"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => scrollToView(v)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  activeView === v ? "bg-black w-6" : "bg-gray-300 w-2"
+                }`}
+                aria-label={`View ${v}`}
+              />
+            ))}
           </div>
         )}
-        
-        {/* Horizontal Layout on Desktop, Swipeable Horizontal Scroll on Mobile */}
-        <div 
+
+        <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className={`flex flex-row md:gap-4 h-full min-h-0 md:overflow-x-visible snap-x snap-mandatory scroll-smooth ${styles.hideScrollbar}`}
-          style={{
-            overflowX: 'auto',
-          }}
+          className={`flex flex-row md:gap-4 flex-1 min-h-0 md:overflow-x-visible snap-x snap-mandatory scroll-smooth ${modalStyles.hideScrollbar}`}
+          style={{ overflowX: "auto" }}
         >
-          
-          {/* Component Preview Section */}
+          {/* ── Preview panel ── */}
           {displayComponent && (
-            <div 
-              className={`${styles.componentPreview} ${styles.mobileFullWidth}`}
-              style={{ 
-                position: 'relative',
-                borderRadius: '32px',
-                background: 'rgba(255, 255, 255, 0.01)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.03)',
-                padding: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '240px',
-                scrollSnapAlign: 'start',
+            <div
+              className={`${modalStyles.componentPreview} ${modalStyles.mobileFullWidth}`}
+              style={{
+                position: "relative",
+                borderRadius: "32px",
+                background: "rgba(255,255,255,0.01)",
+                border: "1px solid rgba(255,255,255,0.4)",
+                boxShadow: "inset 0 4px 12px rgba(0,0,0,0.03)",
+                padding: "0.75rem",
+                minHeight: "240px",
+                overflow: "hidden",
+                scrollSnapAlign: "start",
               }}
             >
-              {/* Preview Label and Version Selector */}
               <div className="absolute top-4 left-6 z-30 flex items-center gap-3">
+                <h2 className="text-[1rem] font-semibold tracking-[0.02em] text-black md:text-[1.125rem]">
+                  {componentName}
+                </h2>
                 <span className="px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black">
                   preview
                 </span>
-                
-                {/* Version Dropdown */}
+                {isEditMode && (
+                  <span className="px-3 py-1 rounded-lg bg-black text-white border border-black text-[10px] font-medium uppercase tracking-widest">
+                    live
+                  </span>
+                )}
+
                 {versions && versions.length > 1 && (
                   <div className="relative">
                     <button
@@ -167,30 +368,29 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                       className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black hover:bg-white/90 transition-colors"
                     >
                       {currentVersion?.name || `v${selectedVersion + 1}`}
-                      <ChevronDown 
-                        size={12} 
-                        className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                      <ChevronDown
+                        size={12}
+                        className={`transition-transform ${
+                          isDropdownOpen ? "rotate-180" : ""
+                        }`}
                       />
                     </button>
-                    
+
                     {isDropdownOpen && (
                       <>
-                        {/* Backdrop to close dropdown */}
-                        <div 
+                        <div
                           className="fixed inset-0 z-40"
                           onClick={() => setIsDropdownOpen(false)}
                         />
-                        
-                        {/* Dropdown Menu */}
                         <div className="absolute top-full left-0 mt-2 bg-white/90 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 overflow-hidden z-50 min-w-[140px]">
-                          {versions.map((version, index) => (
+                          {versions?.map((version, index) => (
                             <button
                               key={version.id}
                               onClick={() => handleVersionChange(index)}
                               className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-all duration-200 ${
                                 selectedVersion === index
-                                  ? 'bg-gray-100/80 text-black'
-                                  : 'bg-transparent text-gray-700 hover:bg-gray-50/50'
+                                  ? "bg-gray-100/80 text-black"
+                                  : "bg-transparent text-gray-700 hover:bg-gray-50/50"
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -207,89 +407,132 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                   </div>
                 )}
               </div>
-              
-              {/* Live Component */}
-              <div className="scale-70 origin-center">
-                {React.createElement(displayComponent)}
+
+              <div className={modalStyles.previewStage}>
+                {isEditMode && livePreviewCode ? (
+                  <LiveProvider
+                    code={livePreviewCode}
+                    scope={livePreviewScope}
+                    noInline={true}
+                    enableTypeScript={true}
+                  >
+                    <style>{displayCode.css}</style>
+                    <LivePreview
+                      Component="div"
+                      className={modalStyles.livePreviewContent}
+                      style={{ ["--preview-scale" as string]: previewScale }}
+                    />
+                    <LiveError className={modalStyles.livePreviewError} />
+                  </LiveProvider>
+                ) : (
+                  <div
+                    className={modalStyles.previewStaticContent}
+                    style={{ ["--preview-scale" as string]: previewScale }}
+                  >
+                    {React.createElement(displayComponent)}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Code Section */}
-          <div 
-            className={`${styles.mobileFullWidth}`}
-            style={{ 
-              position: 'relative',
+          {/* ── Code panel ── */}
+          <div
+            className={`${modalStyles.mobileFullWidth}`}
+            style={{
+              position: "relative",
               flex: 1,
               minHeight: 0,
-              borderRadius: '32px',
-              background: 'rgba(255, 255, 255, 0.01)',
-              border: '1px solid rgba(255, 255, 255, 0.4)',
-              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              scrollSnapAlign: 'start',
+              borderRadius: "32px",
+              background: "rgba(255,255,255,0.01)",
+              border: isEditMode
+                ? "1.5px solid rgba(0,0,0,0.12)"
+                : "1px solid rgba(255,255,255,0.4)",
+              boxShadow: "inset 0 4px 12px rgba(0,0,0,0.03)",
+              display: "flex",
+              flexDirection: "column",
+              scrollSnapAlign: "start",
+              overflow: "hidden",
             }}
           >
-            
-            {/* TSX Label */}
-            <div className="absolute top-4 left-6 z-30">
+            {/* tsx / edit label */}
+            <div className="absolute top-4 left-6 z-30 flex items-center gap-2">
               <span className="px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black">
                 tsx
               </span>
+              {isEditMode && (
+                <span className="px-3 py-1 rounded-lg bg-black text-white border border-black text-[10px] font-medium uppercase tracking-widest">
+                  editing
+                </span>
+              )}
             </div>
 
-            {/* Copy Button */}
-            <div className="absolute top-3 right-3 z-30">
+            {/* Top-right toolbar */}
+            <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+              {/* Edit / Back toggle */}
               <button
-                onClick={handleCopy}
+                onClick={toggleEditMode}
                 className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 border ${
-                  copied 
-                    ? "bg-black text-white border-black scale-95 shadow-md" 
+                  isEditMode
+                    ? "bg-black text-white border-black shadow-md"
                     : "bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
                 }`}
               >
-                {copied ? <Check size={14} strokeWidth={3} /> : <Copy size={14} />}
+                {isEditMode ? (
+                  <>
+                    <ArrowLeft size={13} strokeWidth={2.5} /> Back
+                  </>
+                ) : (
+                  <>
+                    <Pencil size={13} strokeWidth={2.5} /> Edit
+                  </>
+                )}
+              </button>
+
+              {/* Copy */}
+              <button
+                onClick={handleCopy}
+                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 border ${
+                  copied
+                    ? "bg-black text-white border-black scale-95 shadow-md"
+                    : "bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
+                }`}
+              >
+                {copied ? (
+                  <Check size={14} strokeWidth={3} />
+                ) : (
+                  <Copy size={14} />
+                )}
                 {copied ? "Copied" : "Copy"}
+              </button>
+
+              <button
+                onClick={handleModalClose}
+                className="flex items-center justify-center px-3.5 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 border bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
+                aria-label="Close code modal"
+              >
+                <X size={15} strokeWidth={2.5} />
               </button>
             </div>
 
-            {/* SCROLLABLE AREA */}
-            <div 
-              className={`${styles.customScrollbar} ${styles.scrollableCodeArea}`}
-              style={{ 
-                flex: 1,
-                minHeight: 0,
-                overflow: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-y pan-x'
-              }}
+            <div
+              className={`${modalStyles.monacoEditorShell} ${modalStyles.scrollableCodeArea}`}
             >
-              <div style={{ padding: "4.5rem 2rem 2rem 2rem" }}>
-                <SyntaxHighlighter
-                  language="tsx"
-                  style={oneLight}
-                  showLineNumbers={true}
-                  customStyle={{
-                    margin: 0,
-                    padding: 0,
-                    fontSize: "0.875rem",
-                    lineHeight: "1.6",
-                    background: "transparent",
-                  }}
-                  lineNumberStyle={{
-                    minWidth: '2.5em',
-                    paddingRight: '1em',
-                    color: '#999',
-                    fontSize: '0.8rem',
-                    userSelect: 'none',
-                    fontStyle: 'normal',
-                  }}
-                  className={styles.codeTransparent}
-                >
-                  {displayCode.tsx}
-                </SyntaxHighlighter>
-              </div>
+              <MonacoEditor
+                beforeMount={handleEditorBeforeMount}
+                onMount={handleEditorMount}
+                height="100%"
+                defaultLanguage="typescript"
+                language="typescript"
+                theme={monacoThemeName}
+                path={monacoModelPath}
+                value={isEditMode ? editedCode : displayCode.tsx}
+                onChange={(value) => {
+                  if (!isEditMode) return;
+                  setEditedCode(value ?? "");
+                }}
+                options={codeEditorOptions}
+              />
             </div>
           </div>
         </div>
