@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { Canvas } from '@/components/Canvas/Canvas';
 import { SearchModal } from '@/components/SearchModal/SearchModal';
 import { ShowcaseItem } from '@/types';
@@ -32,16 +31,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar/Navbar - Desktop sidebar, Mobile navbar */}
-      <Sidebar onSearchClick={() => setIsSearchOpen(true)} />
-
-      {/* Main Canvas Area */}
+    <div className="h-screen overflow-hidden bg-gray-50">
       <main className="flex-1 h-full overflow-hidden">
-        <Canvas highlightedItemId={highlightedItemId} />
+        <Canvas
+          highlightedItemId={highlightedItemId}
+          onSearchClick={() => setIsSearchOpen(true)}
+        />
       </main>
 
-      {/* Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
