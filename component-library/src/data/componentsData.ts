@@ -1,15 +1,28 @@
 import { ShowcaseItem } from "@/types";
+import { FigmaCanvas } from "@/components/library/Canvas/FigmaCanvas/FigmaCanvas";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
-import { AnalogClockV2 } from "@/components/library/Clock/AnalogClockV2/AnalogClockV2";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCalendar";
 import Card1 from "@/components/library/Card/Card1";
+import FoldingLetters from "@/components/library/Card/FoldingLetters";
 import Folder1 from "@/components/library/Folder/Folder1";
 import Drawer1 from "@/components/library/Drawer/Drawer1";
+import { foldingLettersCode } from "@/data/code/foldingLettersCode";
 import { analogClockVersions } from "@/data/versions/analogClockVersions";
 import { cardVersions } from "@/data/versions/cardVersions";
 
 export const showcaseItems: ShowcaseItem[] = [
+  {
+    id: "figma-canvas",
+    name: "Figma Canvas",
+    category: "Canvas",
+    component: FigmaCanvas,
+    code: {
+      tsx: `'use client';
+// See FigmaCanvas.tsx for full source`,
+      css: `/* No external CSS needed */`,
+    },
+  },
   {
     id: "analog-clock-1",
     name: "Analog Clock",
@@ -431,6 +444,16 @@ export default Card1;`,
       css: `/* No external CSS needed - uses Tailwind classes */`,
     },
     versions: cardVersions,
+  },
+  {
+    id: "folding-letters-1",
+    name: "Folding Letters",
+    category: "Card",
+    component: FoldingLetters,
+    code: {
+      tsx: foldingLettersCode,
+      css: `/* No external CSS needed - uses Tailwind classes and inline styles */`,
+    },
   },
   {
     id: "folder-1",
