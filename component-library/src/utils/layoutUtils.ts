@@ -57,6 +57,8 @@ export const getComponentSize = (item: ShowcaseItem): { width: number; height: n
     'flip-calendar-1': { width: 225, height: 225 },
     'card-1': { width: 520, height: 380 },
     'folding-letters-1': { width: 476, height: 532 },
+    'hire-me-lanyard-1': { width: 476, height: 420 },
+    'contact-page-1': { width: 490, height: 290 },
     'folder-1': { width: 285, height: 285 },
     'drawer-1': { width: 235, height: 235 },
     'code-modal-1': { width: 600, height: 450 },

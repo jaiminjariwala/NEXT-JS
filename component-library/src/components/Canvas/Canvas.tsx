@@ -19,6 +19,43 @@ interface CanvasProps {
 type ItemSizeMap = Record<string, { width: number; height: number }>;
 type ViewMode = "canvas" | "grid";
 
+const getItemPreviewScale = (itemId: string) => {
+  switch (itemId) {
+    case "card-v1":
+      return 0.58;
+    default:
+      return ITEM_PREVIEW_SCALE;
+  }
+};
+
+const getItemPreviewWidth = (itemId: string) => {
+  switch (itemId) {
+    case "card-v2":
+      return 640;
+    default:
+      return undefined;
+  }
+};
+
+const getCanvasPreviewFrameStyle = (itemId: string) => {
+  switch (itemId) {
+    case "hire-me-lanyard-1":
+      return {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 560,
+        height: 600,
+        borderRadius: 28,
+        background: "#ffffff",
+        boxSizing: "border-box" as const,
+        ["--hire-r3f-width" as string]: "560px",
+      };
+    default:
+      return undefined;
+  }
+};
+
 const getCanvasLayout = (measuredSizes: ItemSizeMap = {}) => {
   const viewportWidth = window.innerWidth;
   return organizeGridLayout(showcaseItems, viewportWidth, measuredSizes);
@@ -121,9 +158,10 @@ export const Canvas: React.FC<CanvasProps> = ({
           return accumulator;
         }
 
+        const previewScale = getItemPreviewScale(itemId);
         accumulator[itemId] = {
-          width: Math.ceil(element.offsetWidth * ITEM_PREVIEW_SCALE),
-          height: Math.ceil(element.offsetHeight * ITEM_PREVIEW_SCALE),
+          width: Math.ceil(element.offsetWidth * previewScale),
+          height: Math.ceil(element.offsetHeight * previewScale),
         };
 
         return accumulator;
@@ -482,6 +520,8 @@ export const Canvas: React.FC<CanvasProps> = ({
 
               const Component = showcaseItem.component;
               const isHighlighted = highlightedItemId === item.id;
+              const previewWidth = getItemPreviewWidth(item.id);
+              const previewFrameStyle = getCanvasPreviewFrameStyle(item.id);
 
               return (
                 <DraggableItem
@@ -491,8 +531,15 @@ export const Canvas: React.FC<CanvasProps> = ({
                   onPositionUpdate={handlePositionUpdate}
                   onClick={() => handleItemClick(showcaseItem)}
                   isHighlighted={isHighlighted}
+                  previewScale={getItemPreviewScale(item.id)}
                 >
-                  <Component />
+                  <div style={previewFrameStyle}>
+                    <div
+                      style={previewWidth ? { width: previewWidth } : undefined}
+                    >
+                      <Component />
+                    </div>
+                  </div>
                 </DraggableItem>
               );
             })}
@@ -516,14 +563,16 @@ export const Canvas: React.FC<CanvasProps> = ({
                   const baseSize = getItemPreviewSize(item);
                   const size = gridPreviewSizes[item.id];
                   const position = gridPositionMap[item.id];
+                  const previewWidth = getItemPreviewWidth(item.id);
 
                   if (!size || !position || item.hidePreview) {
                     return null;
                   }
 
+                  const previewScale = getItemPreviewScale(item.id);
                   const fitScale = size.width / baseSize.width;
-                  const rawWidth = Math.ceil(baseSize.width / ITEM_PREVIEW_SCALE);
-                  const rawHeight = Math.ceil(baseSize.height / ITEM_PREVIEW_SCALE);
+                  const rawWidth = Math.ceil(baseSize.width / previewScale);
+                  const rawHeight = Math.ceil(baseSize.height / previewScale);
 
                   return (
                     <div
@@ -559,11 +608,17 @@ export const Canvas: React.FC<CanvasProps> = ({
                           style={{
                             width: rawWidth,
                             height: rawHeight,
-                            transform: `scale(${ITEM_PREVIEW_SCALE * fitScale})`,
+                            transform: `scale(${previewScale * fitScale})`,
                             transformOrigin: "top left",
                           }}
                         >
-                          <Component />
+                          <div
+                            style={
+                              previewWidth ? { width: previewWidth } : undefined
+                            }
+                          >
+                            <Component />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -582,7 +637,6 @@ export const Canvas: React.FC<CanvasProps> = ({
           code={selectedItem.code}
           componentName={selectedItem.name}
           component={selectedItem.hidePreview ? undefined : selectedItem.component}
-          versions={selectedItem.versions}
         />
       )}
     </>

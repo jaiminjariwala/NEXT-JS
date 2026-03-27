@@ -11,6 +11,7 @@ interface DraggableItemProps {
   onClick: () => void;
   children: React.ReactNode;
   isHighlighted?: boolean;
+  previewScale?: number;
 }
 
 export const DraggableItem: React.FC<DraggableItemProps> = ({
@@ -19,7 +20,8 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
   onPositionUpdate,
   onClick,
   children,
-  isHighlighted = false
+  isHighlighted = false,
+  previewScale = ITEM_PREVIEW_SCALE,
 }) => {
   // Visual state for user feedback
   const [isDragging, setIsDragging] = useState(false);
@@ -229,7 +231,7 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         touchAction: 'none',
-        transform: isDragging ? `scale(${ITEM_PREVIEW_SCALE * 1.05})` : `scale(${ITEM_PREVIEW_SCALE})`,
+        transform: isDragging ? `scale(${previewScale * 1.05})` : `scale(${previewScale})`,
         transformOrigin: 'top left',
         transition: isDragging ? 'transform 0.1s ease' : 'none',
       }}

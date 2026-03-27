@@ -1,17 +1,52 @@
-import { ShowcaseItem } from "@/types";
+import { ComponentVersion, ShowcaseItem } from "@/types";
 import { FigmaCanvas } from "@/components/library/Canvas/FigmaCanvas/FigmaCanvas";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCalendar";
 import Card1 from "@/components/library/Card/Card1";
 import FoldingLetters from "@/components/library/Card/FoldingLetters";
+import HireMeLanyard from "@/components/library/Card/HireMeLanyard";
+import ContactPage from "@/components/library/Contact/ContactPage";
 import Folder1 from "@/components/library/Folder/Folder1";
 import Drawer1 from "@/components/library/Drawer/Drawer1";
+import { contactPageCode } from "@/data/code/contactPageCode";
 import { foldingLettersCode } from "@/data/code/foldingLettersCode";
+import {
+  hireMeLanyardCode,
+  hireMeLanyardCss,
+} from "@/data/code/hireMeLanyardCode";
 import { analogClockVersions } from "@/data/versions/analogClockVersions";
 import { cardVersions } from "@/data/versions/cardVersions";
 
-export const showcaseItems: ShowcaseItem[] = [
+type VersionedShowcaseItem = ShowcaseItem & {
+  versions?: ComponentVersion[];
+};
+
+function formatVersionedName(itemName: string, versionName: string): string {
+  const versionMatch = versionName.match(/^Version\s+(\d+)$/i);
+  if (versionMatch) {
+    return `${itemName} V${versionMatch[1]}`;
+  }
+
+  return `${itemName} ${versionName}`;
+}
+
+function expandShowcaseItem(item: VersionedShowcaseItem): ShowcaseItem[] {
+  if (!item.versions?.length) {
+    return [item];
+  }
+
+  return item.versions.map((version) => ({
+    id: version.id,
+    name: formatVersionedName(item.name, version.name),
+    category: item.category,
+    component: version.component,
+    code: version.code,
+    hidePreview: item.hidePreview,
+  }));
+}
+
+const baseShowcaseItems: VersionedShowcaseItem[] = [
   {
     id: "figma-canvas",
     name: "Figma Canvas",
@@ -456,6 +491,26 @@ export default Card1;`,
     },
   },
   {
+    id: "hire-me-lanyard-1",
+    name: "Employee ID Card Lanyard",
+    category: "Card",
+    component: HireMeLanyard,
+    code: {
+      tsx: hireMeLanyardCode,
+      css: hireMeLanyardCss,
+    },
+  },
+  {
+    id: "contact-page-1",
+    name: "Contact Page",
+    category: "Contact",
+    component: ContactPage,
+    code: {
+      tsx: contactPageCode,
+      css: `/* Styling is included inside the component for this showcase */`,
+    },
+  },
+  {
     id: "folder-1",
     name: "Glass Folder",
     category: "Folder",
@@ -747,3 +802,6 @@ export default Drawer1;`,
     },
   },
 ];
+
+export const showcaseItems: ShowcaseItem[] =
+  baseShowcaseItems.flatMap(expandShowcaseItem);

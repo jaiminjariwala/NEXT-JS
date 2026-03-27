@@ -1,23 +1,28 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import Image from "next/image";
 import MonacoEditor, {
   type BeforeMount as MonacoBeforeMount,
   type OnMount as MonacoOnMount,
 } from "@monaco-editor/react";
 import * as LucideIcons from "lucide-react";
+import * as THREE from "three";
+import { Canvas as FiberCanvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  BallCollider,
+  CuboidCollider,
+  Physics,
+  RigidBody,
+  useRopeJoint,
+  useSphericalJoint,
+} from "@react-three/rapier";
 import { LiveProvider, LivePreview, LiveError } from "react-live";
 import { createPortal } from "react-dom";
+import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 import { BaseModal } from "@/components/BaseModal";
 import { showcaseItems } from "@/data/componentsData";
 import modalStyles from "./CodeModal.module.css";
-
-interface ComponentVersion {
-  id: string;
-  name: string;
-  component: React.ComponentType;
-  code: { tsx: string; css: string };
-}
 
 interface CodeModalProps {
   isOpen: boolean;
@@ -25,7 +30,6 @@ interface CodeModalProps {
   code: { tsx: string; css: string };
   componentName: string;
   component?: React.ComponentType;
-  versions?: ComponentVersion[];
 }
 
 const codeFontFamily =
@@ -33,13 +37,26 @@ const codeFontFamily =
 const codeEditorPaddingTop = 72;
 const codeEditorPaddingBottom = 28;
 
-const { Copy, Check, ChevronDown, Pencil, ArrowLeft, X } = LucideIcons;
+const { Copy, Check, Pencil, ArrowLeft, X } = LucideIcons;
 const monacoThemeName = "component-library-light";
 
 const livePreviewScope = {
   ...React,
   React,
   ...LucideIcons,
+  Image,
+  THREE,
+  Canvas: FiberCanvas,
+  useFrame,
+  useThree,
+  BallCollider,
+  CuboidCollider,
+  Physics,
+  RigidBody,
+  useRopeJoint,
+  useSphericalJoint,
+  MeshLineGeometry,
+  MeshLineMaterial,
   createPortal,
   showcaseItems,
   codeModalStyles: modalStyles,
@@ -116,12 +133,9 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   code,
   componentName,
   component: Component,
-  versions,
 }) => {
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState<"preview" | "code">("preview");
-  const [selectedVersion, setSelectedVersion] = useState(0);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // ── Edit mode state ──
   const [isEditMode, setIsEditMode] = useState(false);
@@ -130,18 +144,38 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const monacoEditorRef = useRef<Parameters<MonacoOnMount>[0] | null>(null);
 
-  const currentVersion =
-    versions && versions.length > 0 ? versions[selectedVersion] : null;
-  const displayComponent = currentVersion?.component || Component;
-  const displayCode = currentVersion?.code || code;
-  const previewScale = componentName === "Figma Canvas" ? 0.9 : 0.7;
+  const displayComponent = Component;
+  const displayCode = code;
+  const isLanyardPreview = componentName === "Employee ID Card Lanyard";
+  const previewScale =
+    componentName === "Figma Canvas"
+      ? 0.9
+      : isLanyardPreview
+        ? 1
+        : 0.7;
+  const previewContentStyle = isLanyardPreview
+    ? ({
+        ["--preview-scale" as string]: 1,
+        ["--preview-content-width" as string]: "100%",
+        ["--preview-content-height" as string]: "100%",
+        ["--hire-r3f-width" as string]: "100%",
+        ["--hire-r3f-height" as string]: "100%",
+      } as React.CSSProperties)
+    : ({ ["--preview-scale" as string]: previewScale } as React.CSSProperties);
   const livePreviewCode = useMemo(
     () => buildLivePreviewCode(editedCode),
     [editedCode]
   );
+  const livePreviewRuntimeScope = useMemo(
+    () => ({
+      ...livePreviewScope,
+      PreviewComponent: displayComponent,
+    }),
+    [displayComponent]
+  );
   const monacoModelPath = `${componentName
     .toLowerCase()
-    .replace(/\s+/g, "-")}-${selectedVersion}.tsx`;
+    .replace(/\s+/g, "-")}.tsx`;
   const codeEditorOptions = useMemo(
     () => ({
       automaticLayout: true,
@@ -211,15 +245,6 @@ export const CodeModal: React.FC<CodeModalProps> = ({
     });
   };
 
-  const handleVersionChange = (index: number) => {
-    const nextCode = versions?.[index]?.code || code;
-    setSelectedVersion(index);
-    setIsDropdownOpen(false);
-    setCopied(false);
-    setIsEditMode(false);
-    setEditedCode(nextCode.tsx);
-  };
-
   const toggleEditMode = () => {
     setIsEditMode((currentMode) => !currentMode);
   };
@@ -285,7 +310,6 @@ export const CodeModal: React.FC<CodeModalProps> = ({
 
   const handleModalClose = () => {
     setCopied(false);
-    setIsDropdownOpen(false);
     setIsEditMode(false);
     setEditedCode(displayCode.tsx);
     onClose();
@@ -360,59 +384,13 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                     live
                   </span>
                 )}
-
-                {versions && versions.length > 1 && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black hover:bg-white/90 transition-colors"
-                    >
-                      {currentVersion?.name || `v${selectedVersion + 1}`}
-                      <ChevronDown
-                        size={12}
-                        className={`transition-transform ${
-                          isDropdownOpen ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {isDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsDropdownOpen(false)}
-                        />
-                        <div className="absolute top-full left-0 mt-2 bg-white/90 backdrop-blur-xl rounded-xl shadow-xl border border-white/80 overflow-hidden z-50 min-w-[140px]">
-                          {versions?.map((version, index) => (
-                            <button
-                              key={version.id}
-                              onClick={() => handleVersionChange(index)}
-                              className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-all duration-200 ${
-                                selectedVersion === index
-                                  ? "bg-gray-100/80 text-black"
-                                  : "bg-transparent text-gray-700 hover:bg-gray-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span>{version.name}</span>
-                                {selectedVersion === index && (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-black ml-2" />
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
 
               <div className={modalStyles.previewStage}>
                 {isEditMode && livePreviewCode ? (
                   <LiveProvider
                     code={livePreviewCode}
-                    scope={livePreviewScope}
+                    scope={livePreviewRuntimeScope}
                     noInline={true}
                     enableTypeScript={true}
                   >
@@ -420,14 +398,14 @@ export const CodeModal: React.FC<CodeModalProps> = ({
                     <LivePreview
                       Component="div"
                       className={modalStyles.livePreviewContent}
-                      style={{ ["--preview-scale" as string]: previewScale }}
+                      style={previewContentStyle}
                     />
                     <LiveError className={modalStyles.livePreviewError} />
                   </LiveProvider>
                 ) : (
                   <div
                     className={modalStyles.previewStaticContent}
-                    style={{ ["--preview-scale" as string]: previewScale }}
+                    style={previewContentStyle}
                   >
                     {React.createElement(displayComponent)}
                   </div>

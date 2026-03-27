@@ -18,5 +18,4 @@ export interface ShowcaseItem {
     css: string;
   };
   hidePreview?: boolean;
-  versions?: ComponentVersion[];
 }
