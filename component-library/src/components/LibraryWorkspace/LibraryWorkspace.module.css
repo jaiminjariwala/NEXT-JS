@@ -1,0 +1,99 @@
+.monacoEditorShell {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.monacoEditorShell :global(.monaco-editor),
+.monacoEditorShell :global(.monaco-editor-background),
+.monacoEditorShell :global(.margin),
+.monacoEditorShell :global(.monaco-editor .margin-view-overlays) {
+  background: transparent !important;
+}
+
+.panelScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panelScroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.panelScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panelScroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.panelScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.18);
+  background-clip: content-box;
+}
+
+.panelScroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+}
+
+.previewCanvas {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.previewFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+  max-width: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.previewStaticContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--preview-content-width, auto);
+  height: var(--preview-content-height, auto);
+  transform: scale(var(--preview-scale, 0.7));
+  transform-origin: center;
+}
+
+.livePreviewContent {
+  width: var(--preview-content-width, auto);
+  height: var(--preview-content-height, auto);
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--preview-scale, 0.7));
+  transform-origin: center;
+}
+
+.livePreviewError {
+  margin: 0 1.5rem 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(220, 38, 38, 0.16);
+  color: #b91c1c;
+  font: 500 0.75rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow: auto;
+}

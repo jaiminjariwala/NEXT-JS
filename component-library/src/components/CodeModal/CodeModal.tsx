@@ -27,7 +27,12 @@ import modalStyles from "./CodeModal.module.css";
 interface CodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  code: { tsx: string; css: string };
+  code: {
+    tsx: string;
+    css: string;
+    language?: "typescript" | "javascript";
+    sourcePath?: string;
+  };
   componentName: string;
   component?: React.ComponentType;
 }
@@ -40,9 +45,27 @@ const codeEditorPaddingBottom = 28;
 const { Copy, Check, Pencil, ArrowLeft, X } = LucideIcons;
 const monacoThemeName = "component-library-light";
 
+function PreviewNavbar() {
+  return null;
+}
+
+function usePreviewContactDraft() {
+  const [message, setMessage] = React.useState("");
+  const [attachments, setAttachments] = React.useState([]);
+
+  return {
+    message,
+    setMessage,
+    attachments,
+    setAttachments,
+  };
+}
+
 const livePreviewScope = {
   ...React,
   React,
+  Navbar: PreviewNavbar,
+  useContactDraft: usePreviewContactDraft,
   ...LucideIcons,
   Image,
   THREE,
@@ -136,6 +159,8 @@ export const CodeModal: React.FC<CodeModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState<"preview" | "code">("preview");
+  const [fetchedCodeTsx, setFetchedCodeTsx] = useState<string | null>(null);
+  const [sourceLoadError, setSourceLoadError] = useState(false);
 
   // ── Edit mode state ──
   const [isEditMode, setIsEditMode] = useState(false);
@@ -144,12 +169,28 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const monacoEditorRef = useRef<Parameters<MonacoOnMount>[0] | null>(null);
 
+  const hasExternalSource = Boolean(code.sourcePath);
+  const isSourceLoading = hasExternalSource && fetchedCodeTsx === null && !sourceLoadError;
+  const hasFullSource = !hasExternalSource || (!!fetchedCodeTsx && !sourceLoadError);
   const displayComponent = Component;
-  const displayCode = code;
+  const displayCode = {
+    ...code,
+    tsx: isSourceLoading
+      ? "// Loading full source..."
+      : sourceLoadError
+        ? "// Unable to load full source."
+        : fetchedCodeTsx ?? code.tsx,
+  };
+  const codeLanguage = displayCode.language === "javascript"
+    ? "javascript"
+    : "typescript";
+  const codeLabel = codeLanguage === "javascript" ? "js" : "tsx";
   const isLanyardPreview = componentName === "Employee ID Card Lanyard";
   const previewScale =
     componentName === "Figma Canvas"
       ? 0.9
+      : componentName === "Contact Page"
+        ? 1
       : isLanyardPreview
         ? 1
         : 0.7;
@@ -175,7 +216,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   );
   const monacoModelPath = `${componentName
     .toLowerCase()
-    .replace(/\s+/g, "-")}.tsx`;
+    .replace(/\s+/g, "-")}${codeLanguage === "javascript" ? ".jsx" : ".tsx"}`;
   const codeEditorOptions = useMemo(
     () => ({
       automaticLayout: true,
@@ -214,6 +255,37 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   );
 
   useEffect(() => {
+    let cancelled = false;
+
+    if (!isOpen || !code.sourcePath) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    fetch(code.sourcePath)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load code sample.");
+        }
+        return response.text();
+      })
+      .then((source) => {
+        if (cancelled) return;
+        setSourceLoadError(false);
+        setFetchedCodeTsx(source);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSourceLoadError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code.sourcePath, code.tsx, isOpen]);
+
+  useEffect(() => {
     if (!isEditMode) return;
 
     requestAnimationFrame(() => {
@@ -222,6 +294,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   }, [isEditMode]);
 
   const handleCopy = async () => {
+    if (!hasFullSource) return;
     await navigator.clipboard.writeText(
       isEditMode ? editedCode : displayCode.tsx
     );
@@ -246,11 +319,17 @@ export const CodeModal: React.FC<CodeModalProps> = ({
   };
 
   const toggleEditMode = () => {
-    setIsEditMode((currentMode) => !currentMode);
+    if (!hasFullSource) return;
+    setIsEditMode((currentMode) => {
+      if (!currentMode) {
+        setEditedCode(displayCode.tsx);
+      }
+      return !currentMode;
+    });
   };
 
   const handleEditorBeforeMount: MonacoBeforeMount = (monaco) => {
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+    const compilerOptions = {
       allowJs: true,
       allowNonTsExtensions: true,
       jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
@@ -260,12 +339,27 @@ export const CodeModal: React.FC<CodeModalProps> = ({
       esModuleInterop: true,
       strict: false,
       noEmit: true,
-    });
-    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+    };
+
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+      compilerOptions
+    );
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+      compilerOptions
+    );
+
+    const diagnosticsOptions = {
       noSemanticValidation: true,
       noSuggestionDiagnostics: true,
       noSyntaxValidation: true,
-    });
+    };
+
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
+      diagnosticsOptions
+    );
+    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
+      diagnosticsOptions
+    );
     monaco.editor.defineTheme(monacoThemeName, {
       base: "vs",
       inherit: true,
@@ -436,7 +530,7 @@ export const CodeModal: React.FC<CodeModalProps> = ({
             {/* tsx / edit label */}
             <div className="absolute top-4 left-6 z-30 flex items-center gap-2">
               <span className="px-3 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/60 text-[10px] font-medium uppercase tracking-widest text-black">
-                tsx
+                {codeLabel}
               </span>
               {isEditMode && (
                 <span className="px-3 py-1 rounded-lg bg-black text-white border border-black text-[10px] font-medium uppercase tracking-widest">
@@ -450,13 +544,18 @@ export const CodeModal: React.FC<CodeModalProps> = ({
               {/* Edit / Back toggle */}
               <button
                 onClick={toggleEditMode}
+                disabled={!hasFullSource}
                 className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 border ${
-                  isEditMode
-                    ? "bg-black text-white border-black shadow-md"
-                    : "bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
+                  !hasFullSource
+                    ? "bg-white/50 text-gray-400 border-white/60 cursor-not-allowed"
+                    : isEditMode
+                      ? "bg-black text-white border-black shadow-md"
+                      : "bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
                 }`}
               >
-                {isEditMode ? (
+                {!hasFullSource ? (
+                  "Loading"
+                ) : isEditMode ? (
                   <>
                     <ArrowLeft size={13} strokeWidth={2.5} /> Back
                   </>
@@ -470,18 +569,23 @@ export const CodeModal: React.FC<CodeModalProps> = ({
               {/* Copy */}
               <button
                 onClick={handleCopy}
+                disabled={!hasFullSource}
                 className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all duration-200 border ${
-                  copied
+                  !hasFullSource
+                    ? "bg-white/50 text-gray-400 border-white/60 cursor-not-allowed"
+                    : copied
                     ? "bg-black text-white border-black scale-95 shadow-md"
                     : "bg-white/80 text-black border-white shadow-sm hover:bg-white hover:shadow-md active:scale-95"
                 }`}
               >
-                {copied ? (
+                {!hasFullSource ? (
+                  <Copy size={14} />
+                ) : copied ? (
                   <Check size={14} strokeWidth={3} />
                 ) : (
                   <Copy size={14} />
                 )}
-                {copied ? "Copied" : "Copy"}
+                {!hasFullSource ? "Wait" : copied ? "Copied" : "Copy"}
               </button>
 
               <button
@@ -497,11 +601,12 @@ export const CodeModal: React.FC<CodeModalProps> = ({
               className={`${modalStyles.monacoEditorShell} ${modalStyles.scrollableCodeArea}`}
             >
               <MonacoEditor
+                key={`${monacoModelPath}-${displayCode.tsx.length}-${isEditMode ? "edit" : "view"}`}
                 beforeMount={handleEditorBeforeMount}
                 onMount={handleEditorMount}
                 height="100%"
-                defaultLanguage="typescript"
-                language="typescript"
+                defaultLanguage={codeLanguage}
+                language={codeLanguage}
                 theme={monacoThemeName}
                 path={monacoModelPath}
                 value={isEditMode ? editedCode : displayCode.tsx}

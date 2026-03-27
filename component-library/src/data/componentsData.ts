@@ -508,6 +508,8 @@ export default Card1;`,
     code: {
       tsx: contactPageCode,
       css: `/* Styling is included inside the component for this showcase */`,
+      language: "javascript",
+      sourcePath: "/code/contact-page.jsx.txt",
     },
   },
   {

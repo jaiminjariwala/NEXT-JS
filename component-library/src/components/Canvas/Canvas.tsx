@@ -23,6 +23,8 @@ const getItemPreviewScale = (itemId: string) => {
   switch (itemId) {
     case "card-v1":
       return 0.58;
+    case "contact-page-1":
+      return 1;
     default:
       return ITEM_PREVIEW_SCALE;
   }
