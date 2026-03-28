@@ -54,7 +54,7 @@ export const hireMeLanyardCss = `
   margin: 0;
   margin-top: 7%;
   font-family: 'Short Stack', cursive;
-  font-size: clamp(1.5rem, 2.6vw, 2.55rem);
+  font-size: clamp(1.35rem, 2.35vw, 2.3rem);
   line-height: 0.92;
   text-align: center;
   letter-spacing: 0;
