@@ -6,7 +6,104 @@ import { DateCalendar } from '@/components/library/Calendar/DateCalendar/DateCal
 
 // ─── Mini draggable card that lives inside the demo canvas ───────────────────
 
+const FIGMA_CANVAS_VIEW_STORAGE_KEY = 'component-library:figma-canvas:view:v1';
+
+type PersistedCardLayout = {
+  x: number;
+  y: number;
+  scale: number;
+};
+
+type PersistedCanvasView = {
+  scale: number;
+  pan: { x: number; y: number };
+};
+
+function readPersistedCardLayout(storageKey: string) {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PersistedCardLayout>;
+    if (
+      typeof parsed.x !== 'number' ||
+      typeof parsed.y !== 'number' ||
+      typeof parsed.scale !== 'number'
+    ) {
+      return null;
+    }
+
+    return parsed as PersistedCardLayout;
+  } catch {
+    return null;
+  }
+}
+
+function readPersistedCanvasView() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(FIGMA_CANVAS_VIEW_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PersistedCanvasView>;
+    if (
+      typeof parsed.scale !== 'number' ||
+      typeof parsed.pan?.x !== 'number' ||
+      typeof parsed.pan?.y !== 'number'
+    ) {
+      return null;
+    }
+
+    return parsed as PersistedCanvasView;
+  } catch {
+    return null;
+  }
+}
+
+function getInitialCardPosition(storageKey: string, initialX: number, initialY: number) {
+  const persistedLayout = readPersistedCardLayout(storageKey);
+  if (!persistedLayout) {
+    return { x: initialX, y: initialY };
+  }
+
+  return { x: persistedLayout.x, y: persistedLayout.y };
+}
+
+function getInitialCardScale(
+  storageKey: string,
+  initialFrameScale: number,
+  minFrameScale: number,
+  maxFrameScale: number
+) {
+  const persistedLayout = readPersistedCardLayout(storageKey);
+  if (!persistedLayout) return initialFrameScale;
+
+  return Math.min(
+    Math.max(persistedLayout.scale, minFrameScale),
+    maxFrameScale
+  );
+}
+
+function getInitialCanvasView() {
+  const persistedView = readPersistedCanvasView();
+  if (!persistedView) {
+    return {
+      scale: 1,
+      pan: { x: 0, y: 0 },
+    };
+  }
+
+  return {
+    scale: Math.min(Math.max(persistedView.scale, 0.2), 4),
+    pan: persistedView.pan,
+  };
+}
+
 interface DraggableCardProps {
+  storageKey: string;
   initialX: number;
   initialY: number;
   canvasScale: number;
@@ -21,6 +118,7 @@ interface DraggableCardProps {
 }
 
 const DraggableCard: React.FC<DraggableCardProps> = ({
+  storageKey,
   initialX,
   initialY,
   canvasScale,
@@ -33,10 +131,19 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
   onSelect,
   children,
 }) => {
-  const [pos, setPos] = useState({ x: initialX, y: initialY });
+  const [pos, setPos] = useState(() =>
+    getInitialCardPosition(storageKey, initialX, initialY)
+  );
   const [dragging, setDragging] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<null | 'nw' | 'ne' | 'sw' | 'se'>(null);
-  const [frameScale, setFrameScale] = useState(initialFrameScale);
+  const [frameScale, setFrameScale] = useState(() =>
+    getInitialCardScale(
+      storageKey,
+      initialFrameScale,
+      minFrameScale,
+      maxFrameScale
+    )
+  );
   const [contentSize, setContentSize] = useState({ width: 1, height: 1 });
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef({
@@ -51,6 +158,21 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
   const frameHeight = contentSize.height;
   const showSelection = selected || dragging || !!resizeHandle;
   const scaledSelectionRadius = selectionRadius * frameScale;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          x: pos.x,
+          y: pos.y,
+          scale: frameScale,
+        } satisfies PersistedCardLayout)
+      );
+    } catch {}
+  }, [frameScale, pos.x, pos.y, storageKey]);
 
   useEffect(() => {
     const node = contentRef.current;
@@ -206,7 +328,7 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
           style={{
             position: 'absolute',
             inset: -2,
-            border: '1.5px solid #0d99ff',
+            border: '2.5px solid #0d99ff',
             borderRadius: scaledSelectionRadius,
             pointerEvents: 'none',
             zIndex: 10,
@@ -230,8 +352,8 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
               width: 7,
               height: 7,
               background: '#fff',
-              border: '1.5px solid #0d99ff',
-              borderRadius: 2,
+              border: '2px solid #0d99ff',
+              borderRadius: 0,
               cursor,
               zIndex: 11,
               ...style,
@@ -261,8 +383,9 @@ const DraggableCard: React.FC<DraggableCardProps> = ({
 // ─── The main FigmaCanvas component ─────────────────────────────────────────
 
 export const FigmaCanvas: React.FC = () => {
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const initialView = getInitialCanvasView();
+  const [scale, setScale] = useState(initialView.scale);
+  const [pan, setPan] = useState(initialView.pan);
   const [isPanning, setIsPanning] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
@@ -274,6 +397,20 @@ export const FigmaCanvas: React.FC = () => {
 
   useEffect(() => { scaleRef.current = scale; }, [scale]);
   useEffect(() => { panRef.current = pan; }, [pan]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(
+        FIGMA_CANVAS_VIEW_STORAGE_KEY,
+        JSON.stringify({
+          scale,
+          pan,
+        } satisfies PersistedCanvasView)
+      );
+    } catch {}
+  }, [pan, scale]);
 
   // Ctrl/Cmd + scroll → zoom
   useEffect(() => {
@@ -371,11 +508,7 @@ export const FigmaCanvas: React.FC = () => {
             zIndex: 20,
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(24,24,27,0.92)',
-            borderRadius: 8,
-            overflow: 'hidden',
-            gap: 0,
-            boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+            gap: 4,
           }}
         >
           {([
@@ -388,15 +521,18 @@ export const FigmaCanvas: React.FC = () => {
               key={i}
               onClick={fn ?? undefined}
               style={{
-                padding: '5px 9px',
-                background: 'transparent',
-                color: '#d4d4d8',
-                border: 'none',
-                fontSize: 11,
+                padding: '5px 8px',
+                background: '#F5F5F5',
+                color: '#000000',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: 8,
+                fontSize: 15,
+                fontWeight: 400,
                 cursor: fn ? 'pointer' : 'default',
-                minWidth: label.includes('%') ? 42 : 'auto',
+                minWidth: label.includes('%') ? 52 : 'auto',
                 textAlign: 'center',
-                lineHeight: 1.6,
+                lineHeight: 1.1,
+                boxShadow: 'none',
               }}
             >
               {label}
@@ -418,6 +554,7 @@ export const FigmaCanvas: React.FC = () => {
         >
           {/* Component 1 — Analog Clock V1 */}
           <DraggableCard
+            storageKey="component-library:figma-canvas:analog-clock-v1"
             initialX={18}
             initialY={18}
             canvasScale={scale}
@@ -442,6 +579,7 @@ export const FigmaCanvas: React.FC = () => {
 
           {/* Component 2 — Date Calendar */}
           <DraggableCard
+            storageKey="component-library:figma-canvas:date-calendar"
             initialX={250}
             initialY={88}
             canvasScale={scale}
