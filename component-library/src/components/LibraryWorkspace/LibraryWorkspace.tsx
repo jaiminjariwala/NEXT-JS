@@ -116,9 +116,42 @@ function stripClientDirective(tsx: string): string {
 }
 
 function stripImports(tsx: string): string {
+  let isInsideImportBlock = false;
+
   return tsx
     .split("\n")
-    .filter((line) => !line.trim().startsWith("import "))
+    .filter((line) => {
+      const trimmed = line.trim();
+
+      if (!isInsideImportBlock && !trimmed.startsWith("import ")) {
+        return true;
+      }
+
+      if (trimmed.startsWith("import ")) {
+        const endsInline =
+          trimmed.endsWith(";") ||
+          (trimmed.includes(" from ") && /['"]/.test(trimmed));
+
+        if (!endsInline) {
+          isInsideImportBlock = true;
+        }
+
+        return false;
+      }
+
+      if (isInsideImportBlock) {
+        if (
+          trimmed.endsWith(";") ||
+          (trimmed.includes(" from ") && /['"]/.test(trimmed))
+        ) {
+          isInsideImportBlock = false;
+        }
+
+        return false;
+      }
+
+      return true;
+    })
     .join("\n");
 }
 
@@ -141,6 +174,14 @@ function findRenderTarget(tsx: string): string | null {
   return localDeclarations.length > 0
     ? localDeclarations[localDeclarations.length - 1][1]
     : null;
+}
+
+function getDeclaredIdentifiers(tsx: string): string[] {
+  return [
+    ...tsx.matchAll(
+      /(?:^|\n)\s*(?:export\s+)?(?:const|function|class)\s+([A-Za-z_][A-Za-z0-9_]*)/g
+    ),
+  ].map((match) => match[1]);
 }
 
 function buildLivePreviewCode(tsx: string): string | null {
@@ -371,15 +412,30 @@ export function LibraryWorkspace() {
     () => buildLivePreviewCode((displayedCodeSegments.tsx ?? displayPrimaryCode).trim()),
     [displayPrimaryCode, displayedCodeSegments.tsx]
   );
+  const livePreviewDeclaredIdentifiers = useMemo(
+    () =>
+      new Set(
+        getDeclaredIdentifiers((displayedCodeSegments.tsx ?? displayPrimaryCode).trim())
+      ),
+    [displayPrimaryCode, displayedCodeSegments.tsx]
+  );
   const livePreviewCss = isEditMode
     ? displayedCodeSegments.css ?? selectedItem.code.css
     : selectedItem.code.css;
   const livePreviewRuntimeScope = useMemo(
-    () => ({
-      ...livePreviewScope,
-      PreviewComponent: displayComponent,
-    }),
-    [displayComponent]
+    () => {
+      const scope: Record<string, unknown> = {
+        ...livePreviewScope,
+        PreviewComponent: displayComponent,
+      };
+
+      livePreviewDeclaredIdentifiers.forEach((identifier) => {
+        delete scope[identifier];
+      });
+
+      return scope;
+    },
+    [displayComponent, livePreviewDeclaredIdentifiers]
   );
   const monacoModelPath = activeCodeTab
     ? `${selectedItem.id}.${activeCodeTab.extension}`
@@ -972,7 +1028,7 @@ export function LibraryWorkspace() {
 
             <div className={workspaceStyles.monacoEditorShell}>
               <MonacoEditor
-                key={`${monacoModelPath}-${activeCodeValue.length}-${isEditMode ? "edit" : "view"}`}
+                key={monacoModelPath}
                 beforeMount={handleEditorBeforeMount}
                 onMount={handleEditorMount}
                 height="100%"

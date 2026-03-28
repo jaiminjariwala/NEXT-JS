@@ -596,8 +596,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '30rem',
-    width: '30rem',
+    height: '25rem',
+    width: '25rem',
     backgroundColor: '#ffffff',
     borderRadius: '32px',
   },
@@ -641,7 +641,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     position: 'absolute',
     bottom: '0px',
     width: '100%',
-    height: '90%',
+    height: '89%',
     zIndex: 10,
     transformOrigin: 'bottom center',
     transition: 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
@@ -721,7 +721,7 @@ const Drawer1: React.FC<DrawerProps> = ({
 
   const drawerContent = isOpen ? (
     <div 
-      className="fixed inset-0 bg-black/40 z-[99999] transition-opacity duration-300"
+      className="fixed inset-0 bg-black/40 z-99999 transition-opacity duration-300"
       style={{ position: 'fixed' }}
       onClick={() => setIsOpen(false)}
     >
@@ -729,7 +729,7 @@ const Drawer1: React.FC<DrawerProps> = ({
       <div
         className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-2xl transform transition-transform duration-300 ease-out"
         style={{
-          height: '40vh',
+          height: '44vh',
           width: '100vw',
           animation: 'slideUp 300ms ease-out',
           position: 'fixed'
@@ -737,27 +737,18 @@ const Drawer1: React.FC<DrawerProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Handle */}
-        <div className="flex justify-center pt-4 pb-2">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        <div className="flex justify-center pt-4 pb-4">
+          <div className="w-14 h-1.5 bg-[#f1f0ef] rounded-full"></div>
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-          aria-label="Close drawer"
-        >
-          <X size={20} className="text-gray-500" />
-        </button>
-
         {/* Drawer Body - Centered */}
-        <div className="px-6 pb-8 pt-2 overflow-y-auto flex flex-col items-center justify-center" style={{ maxHeight: 'calc(40vh - 60px)' }}>
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+        <div className=" pt-4 overflow-y-auto flex flex-col items-center justify-center" style={{ maxHeight: 'calc(60vh - 40px)' }}>
+          <div className="max-w-[29vw]">
+            <h2 className="from-neutral-600 font-normal text-[18px] text-[#464646] mb-5">
               {title}
             </h2>
             
-            <div className="text-gray-600 text-base leading-relaxed space-y-4">
+            <div className="text-[#5b5b5b] text-[16.5px] leading-normal space-y-2.5">
               {description.split('\\n\\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))}
@@ -771,10 +762,10 @@ const Drawer1: React.FC<DrawerProps> = ({
   return (
     <>
       {/* Square Container with Drawer Button */}
-      <div className="w-80 h-80 bg-gray-100 rounded-3xl flex items-center justify-center">
+      <div className="w-80 h-80 bg-white rounded-3xl flex items-center justify-center">
         <button
           onClick={() => setIsOpen(true)}
-          className="px-8 py-4 bg-white border border-gray-300 rounded-full text-gray-900 font-semibold text-lg hover:bg-gray-50 transition-colors shadow-sm"
+          className="px-8 py-4 bg-white border border-[#dadada] rounded-full text-[#6a6a6a] font-normal text-2xl hover:bg-[#fcfcfc] transition-colors shadow-xs"
         >
           {buttonText}
         </button>
