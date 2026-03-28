@@ -42,7 +42,7 @@ const RESIZE_HANDLE_WIDTH = 1;
 const defaultSelectedItem =
   showcaseItems.find((item) => item.id === defaultSelectedItemId) ?? showcaseItems[0];
 
-const { Copy, Check, Pencil, ArrowLeft, ChevronRight } = LucideIcons;
+const { ChevronRight } = LucideIcons;
 
 function PreviewNavbar() {
   return null;
@@ -245,6 +245,11 @@ export function LibraryWorkspace() {
           ["--hire-r3f-width" as string]: "100%",
           ["--hire-r3f-height" as string]: "100%",
         } as React.CSSProperties)
+      : selectedItem.id === "contact-page-1"
+        ? ({
+            ["--preview-scale" as string]: 1,
+            ["--preview-content-width" as string]: "100%",
+          } as React.CSSProperties)
       : ({ ["--preview-scale" as string]: previewScale } as React.CSSProperties);
   const livePreviewCode = useMemo(
     () => buildLivePreviewCode(editedCode),
@@ -671,16 +676,14 @@ export function LibraryWorkspace() {
         )}
 
         <aside
-          className={`flex min-h-0 shrink-0 flex-col overflow-hidden bg-[#ebf9ff] ${
+          className={`flex min-h-0 shrink-0 flex-col overflow-hidden bg-white ${
             isResizingSidebar ? "" : "transition-[width] duration-150"
           }`}
           style={{ width: sidebarWidth }}
         >
-          <div className="border-b border-[#d8eff9] bg-[#d8eff9] px-4 py-4">
-            <h1 className="text-[30px] font-normal leading-[0.94] tracking-tight text-black">
-              Component
-              <br />
-              Library
+          <div className="bg-white px-4 py-4">
+            <h1 className="text-[16px] font-normal leading-[1.1] tracking-[-0.01em] text-black">
+              Component Library
             </h1>
           </div>
 
@@ -696,8 +699,8 @@ export function LibraryWorkspace() {
                     onClick={() => handleSelectItem(item)}
                     className={`rounded-lg px-2 py-[5px] text-left text-[15px] leading-[1.1] transition-all duration-200 ${
                       isSelected
-                        ? "bg-black text-white"
-                        : "text-black hover:bg-black hover:text-white"
+                        ? "bg-[#F3F4F4] text-black"
+                        : "text-black hover:bg-[#F3F4F4]"
                     }`}
                   >
                     {item.name}
@@ -789,24 +792,20 @@ export function LibraryWorkspace() {
                 type="button"
                 onClick={toggleEditMode}
                 disabled={!hasFullSource}
-                className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center gap-2 rounded-[2px] border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
                   !hasFullSource
-                    ? "cursor-not-allowed border-black/8 bg-black/[0.03] text-black/35"
+                    ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
                     : isEditMode
                       ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#f8fafc] text-black hover:bg-white hover:shadow-sm active:scale-95"
+                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-[#F5F5F5] hover:shadow-sm active:scale-95"
                 }`}
               >
                 {!hasFullSource ? (
                   "Loading"
                 ) : isEditMode ? (
-                  <>
-                    <ArrowLeft size={13} strokeWidth={2.5} /> Back
-                  </>
+                  "Back"
                 ) : (
-                  <>
-                    <Pencil size={13} strokeWidth={2.5} /> Edit
-                  </>
+                  "Edit"
                 )}
               </button>
 
@@ -814,19 +813,14 @@ export function LibraryWorkspace() {
                 type="button"
                 onClick={handleCopy}
                 disabled={!hasFullSource}
-                className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center gap-2 rounded-[2px] border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
                   !hasFullSource
-                    ? "cursor-not-allowed border-black/8 bg-black/[0.03] text-black/35"
+                    ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
                     : copied
                       ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#f8fafc] text-black hover:bg-white hover:shadow-sm active:scale-95"
+                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-[#F5F5F5] hover:shadow-sm active:scale-95"
                 }`}
               >
-                {copied ? (
-                  <Check size={14} strokeWidth={3} />
-                ) : (
-                  <Copy size={14} />
-                )}
                 {!hasFullSource ? "Wait" : copied ? "Copied" : "Copy"}
               </button>
             </div>

@@ -1001,8 +1001,7 @@ export default function FoldingLetters() {
     <div
       className="relative h-[760px] w-[680px] overflow-hidden rounded-[40px] font-sans select-none"
       style={{
-        background:
-          'radial-gradient(circle at top, rgba(249,249,247,1) 0%, rgba(239,239,236,1) 62%, rgba(233,233,230,1) 100%)',
+        background: '#F5F5F5',
       }}
     >
       <style>{`
