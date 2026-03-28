@@ -21,6 +21,8 @@ import { LiveError, LivePreview, LiveProvider } from "react-live";
 import { createPortal } from "react-dom";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 import { showcaseItems } from "@/data/componentsData";
+import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
+import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import type { ShowcaseItem } from "@/types";
 import workspaceStyles from "./LibraryWorkspace.module.css";
 
@@ -68,6 +70,8 @@ const livePreviewScope = {
   Navbar: PreviewNavbar,
   Short_Stack,
   useContactDraft: usePreviewContactDraft,
+  AnalogClock,
+  DateCalendar,
   ...LucideIcons,
   Image,
   THREE,
@@ -149,11 +153,13 @@ function buildLivePreviewCode(tsx: string): string | null {
   return `${normalizedTsx}\nrender(<${renderTarget} />);`;
 }
 
-function getPreviewScale(itemId: string): number {
+function getPreviewScale(itemId: string, previewPanelWidth = 0): number {
   switch (itemId) {
     case "card-v1":
       return 0.58;
     case "figma-canvas":
+      if (!previewPanelWidth) return 1;
+      return Math.min(Math.max((previewPanelWidth - 48) / 480, 0.62), 1.35);
     case "contact-page-1":
     case "hire-me-lanyard-1":
       return 1;
@@ -194,9 +200,11 @@ export function LibraryWorkspace() {
     defaultSelectedItem.code.sourcePath ? null : defaultSelectedItem.code.tsx
   );
   const [sourceLoadError, setSourceLoadError] = useState(false);
+  const [previewPanelWidth, setPreviewPanelWidth] = useState(0);
 
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const contentPanelsRef = useRef<HTMLDivElement | null>(null);
+  const previewPanelRef = useRef<HTMLDivElement | null>(null);
   const monacoEditorRef = useRef<Parameters<MonacoOnMount>[0] | null>(null);
   const sidebarResizeStartRef = useRef({
     pointerX: 0,
@@ -226,7 +234,7 @@ export function LibraryWorkspace() {
       : fetchedCodeTsx ?? selectedItem.code.tsx;
   const codeLanguage =
     selectedItem.code.language === "javascript" ? "javascript" : "typescript";
-  const previewScale = getPreviewScale(selectedItem.id);
+  const previewScale = getPreviewScale(selectedItem.id, previewPanelWidth);
   const previewFrameStyle = getPreviewFrameStyle(selectedItem.id);
   const previewContentStyle =
     selectedItem.id === "hire-me-lanyard-1"
@@ -404,6 +412,20 @@ export function LibraryWorkspace() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [clampCodePanelWidth]);
+
+  useEffect(() => {
+    const node = previewPanelRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setPreviewPanelWidth(entry.contentRect.width);
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isResizingSidebar) return;
@@ -703,7 +725,7 @@ export function LibraryWorkspace() {
 
         <div ref={contentPanelsRef} className="flex min-w-0 flex-1">
           <section className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-black/8 bg-white">
-            <div className={workspaceStyles.panelScroll}>
+            <div ref={previewPanelRef} className={workspaceStyles.panelScroll}>
               <div className={workspaceStyles.previewCanvas}>
                 {displayComponent ? (
                   <div

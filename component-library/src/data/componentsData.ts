@@ -56,6 +56,7 @@ const baseShowcaseItems: VersionedShowcaseItem[] = [
       tsx: `'use client';
 // See FigmaCanvas.tsx for full source`,
       css: `/* No external CSS needed */`,
+      sourcePath: "/code/figma-canvas.tsx.txt",
     },
   },
   {
