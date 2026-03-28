@@ -483,7 +483,7 @@ export default Card1;`,
   },
   {
     id: "folding-letters-1",
-    name: "Folding Letters",
+    name: "Folding Letters (Testimonials)",
     category: "Card",
     component: FoldingLetters,
     code: {
@@ -503,7 +503,7 @@ export default Card1;`,
   },
   {
     id: "contact-page-1",
-    name: "Contact Page",
+    name: "Contact Me (Mail) Card",
     category: "Contact",
     component: ContactPage,
     code: {
@@ -806,5 +806,27 @@ export default Drawer1;`,
   },
 ];
 
-export const showcaseItems: ShowcaseItem[] =
-  baseShowcaseItems.flatMap(expandShowcaseItem);
+const showcasePriorityOrder = [
+  "folding-letters-1",
+  "hire-me-lanyard-1",
+  "contact-page-1",
+  "figma-canvas",
+];
+
+export const showcaseItems: ShowcaseItem[] = baseShowcaseItems
+  .flatMap(expandShowcaseItem)
+  .map((item, index) => ({
+    item,
+    index,
+  }))
+  .sort((a, b) => {
+    const aPriority = showcasePriorityOrder.indexOf(a.item.id);
+    const bPriority = showcasePriorityOrder.indexOf(b.item.id);
+
+    const aRank = aPriority === -1 ? Number.MAX_SAFE_INTEGER : aPriority;
+    const bRank = bPriority === -1 ? Number.MAX_SAFE_INTEGER : bPriority;
+
+    if (aRank !== bRank) return aRank - bRank;
+    return a.index - b.index;
+  })
+  .map(({ item }) => item);
