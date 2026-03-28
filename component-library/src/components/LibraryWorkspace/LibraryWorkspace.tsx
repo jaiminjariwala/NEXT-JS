@@ -44,6 +44,18 @@ const defaultSelectedItem =
 
 const { ChevronRight } = LucideIcons;
 
+type CodeTabId = "tsx" | "css" | "html" | "js";
+
+type CodeTab = {
+  id: CodeTabId;
+  label: string;
+  language: "typescript" | "javascript" | "css" | "html";
+  extension: string;
+  value: string;
+};
+
+type EditableCodeSegments = Partial<Record<CodeTabId, string>>;
+
 function PreviewNavbar() {
   return null;
 }
@@ -153,6 +165,86 @@ function buildLivePreviewCode(tsx: string): string | null {
   return `${normalizedTsx}\nrender(<${renderTarget} />);`;
 }
 
+function hasStandaloneCss(css = ""): boolean {
+  const trimmed = css.trim();
+  if (!trimmed) return false;
+
+  return (
+    !trimmed.startsWith("/* No external CSS needed") &&
+    !trimmed.startsWith("/* Styling is included inside the component")
+  );
+}
+
+function getDefaultCodeTabId(code: ShowcaseItem["code"]): CodeTabId {
+  if (code.html?.trim()) return "html";
+  if (code.tsx?.trim()) return "tsx";
+  if (code.js?.trim()) return "js";
+  return "css";
+}
+
+function buildEditableCodeSegments(
+  code: ShowcaseItem["code"],
+  primarySource: string
+): EditableCodeSegments {
+  const segments: EditableCodeSegments = {};
+
+  if (code.html?.trim()) segments.html = code.html;
+  if (code.tsx?.trim() || primarySource.trim()) segments.tsx = primarySource;
+  if (code.js?.trim()) segments.js = code.js;
+  if (code.css.trim()) segments.css = code.css;
+
+  return segments;
+}
+
+function buildCodeTabs(
+  code: ShowcaseItem["code"],
+  primarySource: string
+): CodeTab[] {
+  const tabs: CodeTab[] = [];
+
+  if (code.html?.trim()) {
+    tabs.push({
+      id: "html",
+      label: "html",
+      language: "html",
+      extension: "html",
+      value: code.html,
+    });
+  }
+
+  if (code.tsx?.trim() || primarySource.trim()) {
+    tabs.push({
+      id: "tsx",
+      label: code.language === "javascript" ? "js" : "tsx",
+      language: code.language === "javascript" ? "javascript" : "typescript",
+      extension: code.language === "javascript" ? "jsx" : "tsx",
+      value: primarySource,
+    });
+  }
+
+  if (code.js?.trim()) {
+    tabs.push({
+      id: "js",
+      label: "js",
+      language: "javascript",
+      extension: "js",
+      value: code.js,
+    });
+  }
+
+  if (hasStandaloneCss(code.css)) {
+    tabs.push({
+      id: "css",
+      label: "css",
+      language: "css",
+      extension: "css",
+      value: code.css,
+    });
+  }
+
+  return tabs;
+}
+
 function getPreviewScale(itemId: string, previewPanelWidth = 0): number {
   switch (itemId) {
     case "card-v1":
@@ -191,11 +283,16 @@ export function LibraryWorkspace() {
   const [selectedItemId, setSelectedItemId] = useState(defaultSelectedItemId);
   const [copied, setCopied] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [activeCodeTabId, setActiveCodeTabId] = useState<CodeTabId>(() =>
+    getDefaultCodeTabId(defaultSelectedItem.code)
+  );
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [codePanelWidth, setCodePanelWidth] = useState(DEFAULT_CODE_PANEL_WIDTH);
-  const [editedCode, setEditedCode] = useState(defaultSelectedItem.code.tsx);
+  const [editedCodeSegments, setEditedCodeSegments] = useState<EditableCodeSegments>(
+    () => buildEditableCodeSegments(defaultSelectedItem.code, defaultSelectedItem.code.tsx)
+  );
   const [fetchedCodeTsx, setFetchedCodeTsx] = useState<string | null>(
     defaultSelectedItem.code.sourcePath ? null : defaultSelectedItem.code.tsx
   );
@@ -227,13 +324,32 @@ export function LibraryWorkspace() {
     hasExternalSource && fetchedCodeTsx === null && !sourceLoadError;
   const hasFullSource =
     !hasExternalSource || (!!fetchedCodeTsx && !sourceLoadError);
-  const displayCodeTsx = isSourceLoading
+  const displayPrimaryCode = isSourceLoading
     ? "// Loading full source..."
     : sourceLoadError
       ? "// Unable to load full source."
       : fetchedCodeTsx ?? selectedItem.code.tsx;
-  const codeLanguage =
-    selectedItem.code.language === "javascript" ? "javascript" : "typescript";
+  const availableCodeTabs = useMemo(
+    () => buildCodeTabs(selectedItem.code, displayPrimaryCode),
+    [displayPrimaryCode, selectedItem.code]
+  );
+  const activeCodeTab = useMemo(
+    () => availableCodeTabs.find((tab) => tab.id === activeCodeTabId) ?? availableCodeTabs[0],
+    [activeCodeTabId, availableCodeTabs]
+  );
+  const displayedCodeSegments = useMemo(
+    () =>
+      isEditMode
+        ? {
+            ...buildEditableCodeSegments(selectedItem.code, displayPrimaryCode),
+            ...editedCodeSegments,
+          }
+        : buildEditableCodeSegments(selectedItem.code, displayPrimaryCode),
+    [displayPrimaryCode, editedCodeSegments, isEditMode, selectedItem.code]
+  );
+  const activeCodeValue = activeCodeTab
+    ? displayedCodeSegments[activeCodeTab.id] ?? activeCodeTab.value
+    : "";
   const previewScale = getPreviewScale(selectedItem.id, previewPanelWidth);
   const previewFrameStyle = getPreviewFrameStyle(selectedItem.id);
   const previewContentStyle =
@@ -252,9 +368,12 @@ export function LibraryWorkspace() {
           } as React.CSSProperties)
       : ({ ["--preview-scale" as string]: previewScale } as React.CSSProperties);
   const livePreviewCode = useMemo(
-    () => buildLivePreviewCode(editedCode),
-    [editedCode]
+    () => buildLivePreviewCode((displayedCodeSegments.tsx ?? displayPrimaryCode).trim()),
+    [displayPrimaryCode, displayedCodeSegments.tsx]
   );
+  const livePreviewCss = isEditMode
+    ? displayedCodeSegments.css ?? selectedItem.code.css
+    : selectedItem.code.css;
   const livePreviewRuntimeScope = useMemo(
     () => ({
       ...livePreviewScope,
@@ -262,7 +381,9 @@ export function LibraryWorkspace() {
     }),
     [displayComponent]
   );
-  const monacoModelPath = `${selectedItem.id}.${codeLanguage === "javascript" ? "jsx" : "tsx"}`;
+  const monacoModelPath = activeCodeTab
+    ? `${selectedItem.id}.${activeCodeTab.extension}`
+    : `${selectedItem.id}.tsx`;
   const codeEditorOptions = useMemo(
     () => ({
       automaticLayout: true,
@@ -506,7 +627,9 @@ export function LibraryWorkspace() {
     if (!hasFullSource) return;
     setIsEditMode((currentMode) => {
       if (!currentMode) {
-        setEditedCode(displayCodeTsx);
+        setEditedCodeSegments(
+          buildEditableCodeSegments(selectedItem.code, displayPrimaryCode)
+        );
       }
       return !currentMode;
     });
@@ -514,7 +637,7 @@ export function LibraryWorkspace() {
 
   const handleCopy = async () => {
     if (!hasFullSource) return;
-    await navigator.clipboard.writeText(isEditMode ? editedCode : displayCodeTsx);
+    await navigator.clipboard.writeText(activeCodeValue);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -598,7 +721,8 @@ export function LibraryWorkspace() {
     setSelectedItemId(item.id);
     setCopied(false);
     setIsEditMode(false);
-    setEditedCode(item.code.tsx);
+    setEditedCodeSegments(buildEditableCodeSegments(item.code, item.code.tsx));
+    setActiveCodeTabId(getDefaultCodeTabId(item.code));
     setSourceLoadError(false);
     setFetchedCodeTsx(item.code.sourcePath ? null : item.code.tsx);
   };
@@ -742,7 +866,7 @@ export function LibraryWorkspace() {
                         noInline={true}
                         enableTypeScript={true}
                       >
-                        <style>{selectedItem.code.css}</style>
+                        <style>{livePreviewCss}</style>
                         <LivePreview
                           Component="div"
                           className={workspaceStyles.livePreviewContent}
@@ -787,17 +911,38 @@ export function LibraryWorkspace() {
             className="relative flex min-h-0 shrink-0 flex-col bg-white"
             style={{ width: codePanelWidth }}
           >
+            <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+              {availableCodeTabs.map((tab) => {
+                const isActive = tab.id === activeCodeTab?.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveCodeTabId(tab.id)}
+                    className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
+                      isActive
+                        ? "border-black/8 bg-white text-black"
+                        : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
               <button
                 type="button"
                 onClick={toggleEditMode}
                 disabled={!hasFullSource}
-                className={`flex items-center gap-2 rounded-[2px] border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
                   !hasFullSource
                     ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
                     : isEditMode
                       ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-[#F5F5F5] hover:shadow-sm active:scale-95"
+                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
                 }`}
               >
                 {!hasFullSource ? (
@@ -813,12 +958,12 @@ export function LibraryWorkspace() {
                 type="button"
                 onClick={handleCopy}
                 disabled={!hasFullSource}
-                className={`flex items-center gap-2 rounded-[2px] border px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
                   !hasFullSource
                     ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
                     : copied
                       ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-[#F5F5F5] hover:shadow-sm active:scale-95"
+                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
                 }`}
               >
                 {!hasFullSource ? "Wait" : copied ? "Copied" : "Copy"}
@@ -827,18 +972,21 @@ export function LibraryWorkspace() {
 
             <div className={workspaceStyles.monacoEditorShell}>
               <MonacoEditor
-                key={`${monacoModelPath}-${displayCodeTsx.length}-${isEditMode ? "edit" : "view"}`}
+                key={`${monacoModelPath}-${activeCodeValue.length}-${isEditMode ? "edit" : "view"}`}
                 beforeMount={handleEditorBeforeMount}
                 onMount={handleEditorMount}
                 height="100%"
-                defaultLanguage={codeLanguage}
-                language={codeLanguage}
+                defaultLanguage={activeCodeTab?.language ?? "typescript"}
+                language={activeCodeTab?.language ?? "typescript"}
                 theme={monacoThemeName}
                 path={monacoModelPath}
-                value={isEditMode ? editedCode : displayCodeTsx}
+                value={activeCodeValue}
                 onChange={(value) => {
-                  if (!isEditMode) return;
-                  setEditedCode(value ?? "");
+                  if (!isEditMode || !activeCodeTab) return;
+                  setEditedCodeSegments((current) => ({
+                    ...current,
+                    [activeCodeTab.id]: value ?? "",
+                  }));
                 }}
                 options={codeEditorOptions}
               />

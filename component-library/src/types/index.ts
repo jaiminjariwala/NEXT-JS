@@ -5,6 +5,8 @@ export interface ComponentVersion {
   code: {
     tsx: string;
     css: string;
+    html?: string;
+    js?: string;
     language?: "typescript" | "javascript";
     sourcePath?: string;
   };
@@ -18,6 +20,8 @@ export interface ShowcaseItem {
   code: {
     tsx: string;
     css: string;
+    html?: string;
+    js?: string;
     language?: "typescript" | "javascript";
     sourcePath?: string;
   };
