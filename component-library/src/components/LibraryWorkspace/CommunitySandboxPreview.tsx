@@ -62,6 +62,41 @@ function stripImports(source: string) {
     .join("\n");
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getNamedImportLocals(source: string, moduleName: string) {
+  const namedImportPattern = new RegExp(
+    `import\\s*\\{([\\s\\S]*?)\\}\\s*from\\s*["']${escapeRegExp(moduleName)}["'];?`,
+    "g"
+  );
+
+  const locals = new Set<string>();
+
+  for (const match of source.matchAll(namedImportPattern)) {
+    const bindings = match[1]
+      .split(",")
+      .map((binding) => binding.trim())
+      .filter(Boolean);
+
+    bindings.forEach((binding) => {
+      const aliasMatch = binding.match(/^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/);
+      locals.add(aliasMatch ? aliasMatch[2] : binding);
+    });
+  }
+
+  return Array.from(locals);
+}
+
+function getDefaultImportLocal(source: string, moduleName: string) {
+  const defaultImportPattern = new RegExp(
+    `import\\s+([A-Za-z_$][\\w$]*)\\s*(?:,\\s*\\{[\\s\\S]*?\\})?\\s*from\\s*["']${escapeRegExp(moduleName)}["'];?`
+  );
+
+  return source.match(defaultImportPattern)?.[1] ?? null;
+}
+
 function findRenderTarget(source: string): string | null {
   const namedDefaultExport = source.match(
     /export\s+default\s+function\s+([A-Z][A-Za-z0-9_]*)/
@@ -93,6 +128,7 @@ function buildHtmlSandboxDocument(code: ShowcaseCode) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html, body {
         margin: 0;
@@ -130,6 +166,8 @@ function buildReactSandboxDocument(
   css: string,
   language: ComponentCodeLanguage
 ) {
+  const lucideImportLocals = getNamedImportLocals(source, "lucide-react");
+  const nextImageImportLocal = getDefaultImportLocal(source, "next/image");
   const sanitizedSource = stripImports(stripClientDirective(source))
     .replace(/export\s+default\s+function\s+/g, "function ")
     .replace(/export\s+default\s+class\s+/g, "class ")
@@ -161,6 +199,13 @@ function buildReactSandboxDocument(
       useId
     } = React;
 
+    ${lucideImportLocals.length ? `const { ${lucideImportLocals.join(", ")} } = LucideIcons;` : ""}
+    ${
+      nextImageImportLocal
+        ? `const ${nextImageImportLocal} = (props) => React.createElement("img", props);`
+        : ""
+    }
+
     ${sanitizedSource}
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
@@ -190,6 +235,7 @@ function buildReactSandboxDocument(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html, body {
         margin: 0;
@@ -224,11 +270,18 @@ function buildReactSandboxDocument(
     <script type="module">
       import React from "https://esm.sh/react@19.2.0";
       import * as ReactDOM from "https://esm.sh/react-dom@19.2.0/client";
+      import * as LucideIcons from "https://esm.sh/lucide-react@0.562.0";
 
       window.addEventListener("error", (event) => {
         const root = document.getElementById("root");
         if (!root) return;
         root.innerHTML = '<pre style="margin:0;white-space:pre-wrap;color:#b91c1c;font:500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;">' + (event.error?.message || event.message || "Preview crashed.") + '</pre>';
+      });
+
+      window.addEventListener("unhandledrejection", (event) => {
+        const root = document.getElementById("root");
+        if (!root) return;
+        root.innerHTML = '<pre style="margin:0;white-space:pre-wrap;color:#b91c1c;font:500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;">' + (event.reason?.message || String(event.reason || "Preview crashed.")) + '</pre>';
       });
 
       try {

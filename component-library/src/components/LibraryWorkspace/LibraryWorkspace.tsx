@@ -53,12 +53,12 @@ const MIN_CODE_PANEL_WIDTH = 400;
 const RESIZE_HANDLE_WIDTH = 1;
 const baseCommunityComponentSelect =
   "id, slug, owner_id, name, category, author_name, description, language, tsx, js, html, css, status, created_at, updated_at";
-const extendedCommunityComponentSelect = `${baseCommunityComponentSelect}, forked_from_id, like_count, bookmark_count`;
+const extendedCommunityComponentSelect = `${baseCommunityComponentSelect}, forked_from_id, bookmark_count`;
 const defaultSelectedItem =
   officialShowcaseItems.find((item) => item.id === defaultSelectedItemId) ??
   officialShowcaseItems[0];
 
-const { Bookmark, ChevronRight, GitFork, Heart, Search } = LucideIcons;
+const { Bookmark, ChevronRight, GitFork, Search } = LucideIcons;
 
 type CodeTabId = "tsx" | "css" | "html" | "js";
 
@@ -123,7 +123,7 @@ function isMissingCommunityFeatureSchemaError(error: unknown) {
         ? String((error as { message?: unknown }).message ?? "")
         : "";
 
-  return /forked_from_id|like_count|bookmark_count|community_component_versions|community_component_reactions/i.test(
+  return /forked_from_id|bookmark_count|community_component_versions|community_component_reactions/i.test(
     message
   );
 }
@@ -621,6 +621,44 @@ function getPreviewScale(itemId: string, previewPanelWidth = 0): number {
   }
 }
 
+function normalizeVersionHistory(
+  rows: CommunityComponentVersionRow[]
+): CommunityComponentVersionRow[] {
+  return [...rows].sort((a, b) => b.version_number - a.version_number);
+}
+
+function normalizeComparableValue(value?: string | null) {
+  return (value ?? "").trim();
+}
+
+function getCurrentVersionId(
+  rows: CommunityComponentVersionRow[],
+  item: ShowcaseItem
+) {
+  const matchingRows = rows.filter((row) => {
+    return (
+      normalizeComparableValue(row.name) === normalizeComparableValue(item.name) &&
+      normalizeComparableValue(row.category) ===
+        normalizeComparableValue(item.category) &&
+      normalizeComparableValue(row.description) ===
+        normalizeComparableValue(item.description) &&
+      normalizeComparableValue(row.language) ===
+        normalizeComparableValue(item.code.language) &&
+      normalizeComparableValue(row.tsx) === normalizeComparableValue(item.code.tsx) &&
+      normalizeComparableValue(row.js) === normalizeComparableValue(item.code.js) &&
+      normalizeComparableValue(row.html) === normalizeComparableValue(item.code.html) &&
+      normalizeComparableValue(row.css) === normalizeComparableValue(item.code.css) &&
+      normalizeComparableValue(row.status) === normalizeComparableValue(item.status)
+    );
+  });
+
+  if (matchingRows.length) {
+    return matchingRows.sort((a, b) => b.version_number - a.version_number)[0].id;
+  }
+
+  return rows.find((row) => row.is_current)?.id ?? rows[0]?.id ?? null;
+}
+
 function getPreviewFrameStyle(itemId: string): React.CSSProperties | undefined {
   switch (itemId) {
     case "hire-me-lanyard-1":
@@ -685,6 +723,8 @@ export function LibraryWorkspace() {
   const [versionHistory, setVersionHistory] = useState<CommunityComponentVersionRow[]>([]);
   const [versionHistoryError, setVersionHistoryError] = useState("");
   const [isRestoringVersion, setIsRestoringVersion] = useState<string | null>(null);
+  const [isDeletingVersion, setIsDeletingVersion] = useState<string | null>(null);
+  const [isCommunityAdmin, setIsCommunityAdmin] = useState(false);
   const [fetchedCodeTsx, setFetchedCodeTsx] = useState<string | null>(
     defaultSelectedItem.code.sourcePath ? null : defaultSelectedItem.code.tsx
   );
@@ -749,6 +789,26 @@ export function LibraryWorkspace() {
       ),
     [communityItems, sidebarFilter, sidebarQuery]
   );
+  const savedCommunityItems = useMemo(() => {
+    const dedupedItems = new Map<string, ShowcaseItem>();
+
+    [...ownedCommunityItems, ...communityItems].forEach((item) => {
+      if (item.viewerHasBookmarked) {
+        dedupedItems.set(item.id, item);
+      }
+    });
+
+    return Array.from(dedupedItems.values());
+  }, [communityItems, ownedCommunityItems]);
+  const filteredSavedItems = useMemo(
+    () =>
+      savedCommunityItems.filter(
+        (item) =>
+          (sidebarFilter === "all" || sidebarFilter === "community") &&
+          matchesSidebarQuery(item, sidebarQuery)
+      ),
+    [savedCommunityItems, sidebarFilter, sidebarQuery]
+  );
 
   const selectedItem = useMemo<ShowcaseItem>(() => {
     return (
@@ -761,6 +821,10 @@ export function LibraryWorkspace() {
     selectedItem.source === "community" &&
     Boolean(currentUserId) &&
     selectedItem.ownerId === currentUserId;
+  const canDeleteSelectedCommunityItem =
+    selectedItem.source === "community" &&
+    Boolean(currentUserId) &&
+    (isOwnedCommunityItem || isCommunityAdmin);
   const isSearchActive = Boolean(sidebarQuery.trim()) || sidebarFilter !== "all";
   const selectedItemUpdatedLabel = formatRelativeDate(selectedItem.updatedAt);
 
@@ -881,6 +945,10 @@ export function LibraryWorkspace() {
         );
       }),
     [baseEditableCodeSegments, displayedCodeSegments]
+  );
+  const currentVersionId = useMemo(
+    () => getCurrentVersionId(versionHistory, selectedItem),
+    [selectedItem, versionHistory]
   );
   const codeEditorOptions = useMemo(
     () => ({
@@ -1061,6 +1129,37 @@ export function LibraryWorkspace() {
       subscription.unsubscribe();
     };
   }, [refreshCommunityItems, supabaseClient]);
+
+  useEffect(() => {
+    if (!supabaseClient || !currentUserEmail) {
+      setIsCommunityAdmin(false);
+      return;
+    }
+
+    let active = true;
+
+    void supabaseClient
+      .from("community_admins")
+      .select("email")
+      .eq("email", currentUserEmail)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          setIsCommunityAdmin(false);
+          return;
+        }
+
+        setIsCommunityAdmin(Boolean(data));
+      }, () => {
+        if (!active) return;
+        setIsCommunityAdmin(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentUserEmail, supabaseClient]);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -1545,7 +1644,7 @@ export function LibraryWorkspace() {
       !supabaseClient ||
       !currentUserId ||
       item.source !== "community" ||
-      item.ownerId !== currentUserId ||
+      (item.ownerId !== currentUserId && !isCommunityAdmin) ||
       !item.id
     ) {
       return;
@@ -1556,11 +1655,16 @@ export function LibraryWorkspace() {
     );
     if (!shouldDelete) return;
 
-    const { error } = await supabaseClient
+    let deleteQuery = supabaseClient
       .from("community_components")
       .delete()
-      .eq("id", getCommunityRowId(item.id))
-      .eq("owner_id", currentUserId);
+      .eq("id", getCommunityRowId(item.id));
+
+    if (!isCommunityAdmin || item.ownerId === currentUserId) {
+      deleteQuery = deleteQuery.eq("owner_id", currentUserId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       window.alert(error.message);
@@ -1603,6 +1707,41 @@ export function LibraryWorkspace() {
     []
   );
 
+  const loadVersionHistory = useCallback(
+    async (itemId: string) => {
+      if (
+        !supabaseClient ||
+        !currentUserId ||
+        !supportsCommunityFeatureSchema
+      ) {
+        setVersionHistory([]);
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("community_component_versions")
+        .select(
+          "id, component_id, owner_id, name, category, description, language, tsx, js, html, css, status, version_number, is_current, created_at"
+        )
+        .eq("component_id", getCommunityRowId(itemId))
+        .order("version_number", { ascending: false });
+
+      if (error) {
+        setVersionHistory([]);
+        setVersionHistoryError(error.message);
+        return;
+      }
+
+      setVersionHistory(
+        normalizeVersionHistory(
+          (data as CommunityComponentVersionRow[] | null) ?? []
+        )
+      );
+      setVersionHistoryError("");
+    },
+    [currentUserId, supabaseClient, supportsCommunityFeatureSchema]
+  );
+
   const handlePersistEditedCode = async () => {
     if (!supabaseClient || !currentUserId || !isOwnedCommunityItem || !hasEditableCodeChanges) {
       return;
@@ -1637,7 +1776,6 @@ export function LibraryWorkspace() {
 
       const nextItem = {
         ...mapCommunityRowToShowcaseItem(data as unknown as CommunityComponentRow),
-        viewerHasLiked: selectedItem.viewerHasLiked,
         viewerHasBookmarked: selectedItem.viewerHasBookmarked,
       };
       upsertCommunityItem(nextItem);
@@ -1651,7 +1789,7 @@ export function LibraryWorkspace() {
     }
   };
 
-  const handleToggleReaction = async (reactionType: "like" | "bookmark") => {
+  const handleToggleReaction = async (reactionType: "bookmark") => {
     if (
       !supabaseClient ||
       !currentUserId ||
@@ -1663,10 +1801,7 @@ export function LibraryWorkspace() {
 
     const itemId = selectedItem.id;
     const rowId = getCommunityRowId(itemId);
-    const currentlyActive =
-      reactionType === "like"
-        ? Boolean(selectedItem.viewerHasLiked)
-        : Boolean(selectedItem.viewerHasBookmarked);
+    const currentlyActive = Boolean(selectedItem.viewerHasBookmarked);
 
     setIsTogglingReaction(reactionType);
 
@@ -1694,18 +1829,11 @@ export function LibraryWorkspace() {
 
       patchCommunityItem(itemId, (item) => ({
         ...item,
-        viewerHasLiked:
-          reactionType === "like" ? !currentlyActive : item.viewerHasLiked,
-        viewerHasBookmarked:
-          reactionType === "bookmark" ? !currentlyActive : item.viewerHasBookmarked,
-        likeCount:
-          reactionType === "like"
-            ? Math.max(0, (item.likeCount ?? 0) + (currentlyActive ? -1 : 1))
-            : item.likeCount,
-        bookmarkCount:
-          reactionType === "bookmark"
-            ? Math.max(0, (item.bookmarkCount ?? 0) + (currentlyActive ? -1 : 1))
-            : item.bookmarkCount,
+        viewerHasBookmarked: !currentlyActive,
+        bookmarkCount: Math.max(
+          0,
+          (item.bookmarkCount ?? 0) + (currentlyActive ? -1 : 1)
+        ),
       }));
     } catch (error) {
       window.alert(
@@ -1716,19 +1844,21 @@ export function LibraryWorkspace() {
     }
   };
 
-  const handleForkSelectedComponent = async () => {
-    if (!currentUserId || selectedItem.source !== "community") {
+  const handleForkItem = async (item: ShowcaseItem) => {
+    if (!currentUserId) {
       return;
     }
 
     setIsForkingComponent(true);
     try {
-      const nextState = createComposerStateFromItem(selectedItem);
-      nextState.name = `${selectedItem.name} Copy`;
-      nextState.slug = slugifyComponentName(`${selectedItem.slug || selectedItem.name}-copy`);
+      const nextState = createComposerStateFromItem(item);
+      nextState.name = `${item.name} Copy`;
+      nextState.slug = slugifyComponentName(`${item.slug || item.name}-copy`);
       nextState.status = "draft";
       setComposerTargetItem(null);
-      setComposerForkSourceId(getCommunityRowId(selectedItem.id));
+      setComposerForkSourceId(
+        item.source === "community" ? getCommunityRowId(item.id) : null
+      );
       setComposerState(nextState);
       setComposerActiveCodeTabId(
         nextState.mode === "html"
@@ -1742,6 +1872,44 @@ export function LibraryWorkspace() {
       setIsComposerOpen(true);
     } finally {
       setIsForkingComponent(false);
+    }
+  };
+
+  const handleDeleteVersion = async (version: CommunityComponentVersionRow) => {
+    if (
+      !supabaseClient ||
+      !currentUserId ||
+      !supportsCommunityFeatureSchema ||
+      version.id === currentVersionId
+    ) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete version ${version.version_number} from this component history?`
+    );
+    if (!shouldDelete) return;
+
+    setIsDeletingVersion(version.id);
+
+    try {
+      const { error } = await supabaseClient
+        .from("community_component_versions")
+        .delete()
+        .eq("id", version.id)
+        .eq("owner_id", currentUserId);
+
+      if (error) {
+        throw error;
+      }
+
+      await loadVersionHistory(selectedItem.id);
+    } catch (error) {
+      window.alert(
+        error instanceof Error ? error.message : "Unable to delete this version."
+      );
+    } finally {
+      setIsDeletingVersion(null);
     }
   };
 
@@ -1759,22 +1927,7 @@ export function LibraryWorkspace() {
     setIsLoadingVersionHistory(true);
     setVersionHistoryError("");
 
-    const { data, error } = await supabaseClient
-      .from("community_component_versions")
-      .select(
-        "id, component_id, owner_id, name, category, description, language, tsx, js, html, css, status, version_number, created_at"
-      )
-      .eq("component_id", getCommunityRowId(selectedItem.id))
-      .order("version_number", { ascending: false });
-
-    if (error) {
-      setVersionHistory([]);
-      setVersionHistoryError(error.message);
-      setIsLoadingVersionHistory(false);
-      return;
-    }
-
-    setVersionHistory((data as CommunityComponentVersionRow[] | null) ?? []);
+    await loadVersionHistory(selectedItem.id);
     setIsLoadingVersionHistory(false);
   };
 
@@ -1791,23 +1944,12 @@ export function LibraryWorkspace() {
     setIsRestoringVersion(version.id);
 
     try {
-      const { data, error } = await supabaseClient
-        .from("community_components")
-        .update({
-          name: version.name,
-          category: version.category,
-          description: version.description,
-          language: version.language || "typescript",
-          tsx: version.tsx,
-          js: version.js,
-          html: version.html,
-          css: version.css || "",
-          status: version.status,
-        })
-        .eq("id", version.component_id)
-        .eq("owner_id", currentUserId)
-        .select(extendedCommunityComponentSelect)
-        .single();
+      const { data, error } = await supabaseClient.rpc(
+        "restore_community_component_version",
+        {
+          target_version_id: version.id,
+        }
+      );
 
       if (error || !data) {
         throw error || new Error("Unable to restore this version.");
@@ -1815,12 +1957,11 @@ export function LibraryWorkspace() {
 
       const nextItem = {
         ...mapCommunityRowToShowcaseItem(data as unknown as CommunityComponentRow),
-        viewerHasLiked: selectedItem.viewerHasLiked,
         viewerHasBookmarked: selectedItem.viewerHasBookmarked,
       };
       upsertCommunityItem(nextItem);
       handleSelectItem(nextItem);
-      setIsHistoryModalOpen(false);
+      await loadVersionHistory(nextItem.id);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Unable to restore this version.");
     } finally {
@@ -2001,7 +2142,6 @@ export function LibraryWorkspace() {
 
       const nextItem = {
         ...mapCommunityRowToShowcaseItem(result.data as unknown as CommunityComponentRow),
-        viewerHasLiked: composerTargetItem?.viewerHasLiked ?? false,
         viewerHasBookmarked: composerTargetItem?.viewerHasBookmarked ?? false,
       };
 
@@ -2234,6 +2374,34 @@ export function LibraryWorkspace() {
                 </div>
               ) : null}
 
+              {currentUserId && filteredSavedItems.length ? (
+                <div className="flex flex-col gap-[2px]">
+                  <div
+                    className={`${geistMono.className} px-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-black/35`}
+                  >
+                    Saved
+                  </div>
+                  {filteredSavedItems.map((item) => {
+                    const isSelected = item.id === selectedItem.id;
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectItem(item)}
+                        className={`rounded-lg px-2 py-[5px] text-left text-[15px] leading-[1.1] transition-all duration-200 ${
+                          isSelected
+                            ? "bg-[#F3F4F4] text-black"
+                            : "text-black hover:bg-[#F3F4F4]"
+                        }`}
+                      >
+                        {item.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               {filteredCommunityItems.length ? (
                 <div className="flex flex-col gap-[2px]">
                   <div
@@ -2264,6 +2432,7 @@ export function LibraryWorkspace() {
 
               {!filteredOfficialItems.length &&
               !filteredOwnedItems.length &&
+              !filteredSavedItems.length &&
               !filteredCommunityItems.length ? (
                 <div className="px-2 py-1 text-[13px] leading-[1.4] text-black/45">
                   No components match this search.
@@ -2292,66 +2461,90 @@ export function LibraryWorkspace() {
           <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
             {selectedItem.source === "community" ? (
               <div className="border-b border-black/8 px-4 py-3">
-                <div className="text-[15px] leading-[1.1] text-black">
-                  {selectedItem.name}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-[1.4] text-black/48">
-                  <span>{selectedItem.authorName || "Community"}</span>
-                  <span>{selectedItem.category}</span>
-                  <span>{selectedItem.status || "published"}</span>
-                  {selectedItemUpdatedLabel ? <span>Updated {selectedItemUpdatedLabel}</span> : null}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] leading-[1.1] text-black">
+                      {selectedItem.name}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-[1.4] text-black/48">
+                      <span>{selectedItem.authorName || "Community"}</span>
+                      <span>{selectedItem.category}</span>
+                      <span>{selectedItem.status || "published"}</span>
+                      {selectedItemUpdatedLabel ? <span>Updated {selectedItemUpdatedLabel}</span> : null}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleReaction("bookmark")}
+                      disabled={
+                        !currentUserId ||
+                        !supportsCommunityFeatureSchema ||
+                        isTogglingReaction === "bookmark"
+                      }
+                      className={`flex items-center gap-1 rounded-lg border px-2 py-[5px] text-[13px] leading-[1.1] transition-all duration-200 ${
+                        selectedItem.viewerHasBookmarked
+                          ? "border-black bg-black text-white"
+                          : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white"
+                      } ${!currentUserId || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
+                    >
+                      <Bookmark size={13} strokeWidth={1.8} />
+                      {selectedItem.bookmarkCount ?? 0}
+                    </button>
+                    {currentUserId ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleForkItem(selectedItem)}
+                        disabled={isForkingComponent}
+                        className="flex items-center gap-1 rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[13px] leading-[1.1] text-black transition-all duration-200 hover:bg-white"
+                      >
+                        <GitFork size={13} strokeWidth={1.8} />
+                        {isForkingComponent ? "Forking" : "Fork"}
+                      </button>
+                    ) : null}
+                    {canDeleteSelectedCommunityItem ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteComponent(selectedItem)}
+                        className="flex items-center gap-1 rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[13px] leading-[1.1] text-black transition-all duration-200 hover:bg-white"
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 {selectedItem.description ? (
                   <div className="mt-2 text-[13px] leading-[1.5] text-black/62">
                     {selectedItem.description}
                   </div>
                 ) : null}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                {currentUserId && !isOwnedCommunityItem ? (
+                  <div className="mt-2 text-[12px] leading-[1.5] text-black/48">
+                    Preview only. Save is available only on components you own. Use
+                    Fork to create your own editable copy.
+                  </div>
+                ) : null}
+              </div>
+            ) : currentUserId ? (
+              <div className="border-b border-black/8 px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] leading-[1.1] text-black">
+                      {selectedItem.name}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-[1.4] text-black/48">
+                      <span>{selectedItem.category}</span>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => void handleToggleReaction("like")}
-                    disabled={
-                      !currentUserId ||
-                      !supportsCommunityFeatureSchema ||
-                      isTogglingReaction === "like"
-                    }
-                    className={`flex items-center gap-1 rounded-lg border px-2 py-[5px] text-[13px] leading-[1.1] transition-all duration-200 ${
-                      selectedItem.viewerHasLiked
-                        ? "border-black bg-black text-white"
-                        : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white"
-                    } ${!currentUserId || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
+                    onClick={() => void handleForkItem(selectedItem)}
+                    disabled={isForkingComponent}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[13px] leading-[1.1] text-black transition-all duration-200 hover:bg-white"
                   >
-                    <Heart size={13} strokeWidth={1.8} />
-                    {selectedItem.likeCount ?? 0}
+                    <GitFork size={13} strokeWidth={1.8} />
+                    {isForkingComponent ? "Forking" : "Fork"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleToggleReaction("bookmark")}
-                    disabled={
-                      !currentUserId ||
-                      !supportsCommunityFeatureSchema ||
-                      isTogglingReaction === "bookmark"
-                    }
-                    className={`flex items-center gap-1 rounded-lg border px-2 py-[5px] text-[13px] leading-[1.1] transition-all duration-200 ${
-                      selectedItem.viewerHasBookmarked
-                        ? "border-black bg-black text-white"
-                        : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white"
-                    } ${!currentUserId || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
-                  >
-                    <Bookmark size={13} strokeWidth={1.8} />
-                    {selectedItem.bookmarkCount ?? 0}
-                  </button>
-                  {currentUserId ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleForkSelectedComponent()}
-                      disabled={isForkingComponent}
-                      className="flex items-center gap-1 rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[13px] leading-[1.1] text-black transition-all duration-200 hover:bg-white"
-                    >
-                      <GitFork size={13} strokeWidth={1.8} />
-                      {isForkingComponent ? "Forking" : "Fork"}
-                    </button>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -2471,6 +2664,12 @@ export function LibraryWorkspace() {
                 </button>
               ) : null}
 
+              {selectedItem.source === "community" && isEditMode && !isOwnedCommunityItem ? (
+                <div className="flex items-center rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[15px] leading-[1.1] font-normal text-black/45">
+                  Preview only
+                </div>
+              ) : null}
+
               {isOwnedCommunityItem && isEditMode ? (
                 <button
                   type="button"
@@ -2587,31 +2786,73 @@ export function LibraryWorkspace() {
                   {versionHistoryError}
                 </div>
               ) : versionHistory.length ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {versionHistory.map((version) => (
                     <div
                       key={version.id}
-                      className="rounded-xl border border-black/8 bg-[#fafafa] px-4 py-3"
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={version.id === currentVersionId}
+                      onClick={() => {
+                        if (version.id !== currentVersionId) {
+                          void handleRestoreVersion(version);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          (event.key === "Enter" || event.key === " ") &&
+                          version.id !== currentVersionId
+                        ) {
+                          event.preventDefault();
+                          void handleRestoreVersion(version);
+                        }
+                      }}
+                      className={`block w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 ${
+                        version.id === currentVersionId
+                          ? "border-black/12 bg-white shadow-[0_2px_10px_rgba(15,23,42,0.05)]"
+                          : "border-black/8 bg-[#fafafa] hover:bg-white active:scale-[0.998]"
+                      } ${
+                        isRestoringVersion === version.id
+                          ? "cursor-wait opacity-70"
+                          : ""
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="text-[15px] leading-[1.1] text-black">
-                            Version {version.version_number}
+                          <div className="flex items-center gap-2 text-[14px] leading-[1.1] text-black">
+                            <span>Version {version.version_number}</span>
+                            {version.id === currentVersionId ? (
+                              <span className="rounded-md border border-black/8 bg-white px-2 py-[3px] text-[11px] leading-none text-black/55">
+                                Current
+                              </span>
+                            ) : null}
                           </div>
                           <div className="mt-1 text-[12px] leading-[1.45] text-black/48">
                             {formatRelativeDate(version.created_at) || "Unknown date"}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleRestoreVersion(version)}
-                          disabled={isRestoringVersion === version.id}
-                          className={secondaryButtonClassName}
-                        >
-                          {isRestoringVersion === version.id ? "Restoring" : "Restore"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {isRestoringVersion === version.id ? (
+                            <div className="text-[12px] leading-none text-black/45">
+                              Restoring...
+                            </div>
+                          ) : null}
+                          {version.id !== currentVersionId ? (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDeleteVersion(version);
+                              }}
+                              disabled={isDeletingVersion === version.id}
+                              className="flex items-center rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[13px] leading-[1.1] text-black transition-all duration-200 hover:bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              {isDeletingVersion === version.id ? "Deleting" : "Delete"}
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="mt-2 text-[13px] leading-[1.5] text-black/55">
+                      <div className="mt-2 text-[12px] leading-[1.45] text-black/55">
                         {version.description || version.name}
                       </div>
                     </div>

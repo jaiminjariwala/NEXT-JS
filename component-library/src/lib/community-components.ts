@@ -25,9 +25,7 @@ export function mapCommunityRowToShowcaseItem(
     slug: row.slug,
     status: row.status,
     forkedFromId: row.forked_from_id,
-    likeCount: row.like_count ?? 0,
     bookmarkCount: row.bookmark_count ?? 0,
-    viewerHasLiked: viewerReactions?.has(`${reactionKeyPrefix}like`) ?? false,
     viewerHasBookmarked: viewerReactions?.has(`${reactionKeyPrefix}bookmark`) ?? false,
     code: {
       tsx: row.tsx || "",

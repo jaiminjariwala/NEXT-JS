@@ -59,6 +59,7 @@ create table if not exists public.community_component_versions (
   css text not null default '',
   status text not null default 'draft' check (status in ('draft', 'published', 'archived')),
   version_number integer not null,
+  is_current boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),
   unique (component_id, version_number)
 );
@@ -67,12 +68,17 @@ drop policy if exists "Owners can view their own component versions"
   on public.community_component_versions;
 drop policy if exists "Owners can insert their own component versions"
   on public.community_component_versions;
+drop policy if exists "Owners can delete their own component versions"
+  on public.community_component_versions;
 
 alter table public.community_component_versions
   drop constraint if exists community_component_versions_owner_id_fkey;
 
 alter table public.community_component_versions
   alter column owner_id type text using owner_id::text;
+
+alter table public.community_component_versions
+  add column if not exists is_current boolean not null default false;
 
 create index if not exists community_component_versions_component_id_idx
   on public.community_component_versions(component_id, version_number desc);
@@ -129,6 +135,15 @@ as $$
 declare
   next_version_number integer;
 begin
+  if current_setting('app.skip_component_version_snapshot', true) = '1' then
+    return new;
+  end if;
+
+  update public.community_component_versions
+  set is_current = false
+  where component_id = new.id
+    and is_current = true;
+
   select coalesce(max(version_number), 0) + 1
   into next_version_number
   from public.community_component_versions
@@ -146,7 +161,8 @@ begin
     html,
     css,
     status,
-    version_number
+    version_number,
+    is_current
   )
   values (
     new.id,
@@ -160,10 +176,59 @@ begin
     new.html,
     new.css,
     new.status,
-    next_version_number
+    next_version_number,
+    true
   );
 
   return new;
+end;
+$$;
+
+create or replace function public.restore_community_component_version(target_version_id uuid)
+returns public.community_components
+language plpgsql
+as $$
+declare
+  target_version public.community_component_versions%rowtype;
+  restored_component public.community_components%rowtype;
+begin
+  select *
+  into target_version
+  from public.community_component_versions
+  where id = target_version_id
+    and owner_id = auth.uid()::text;
+
+  if not found then
+    raise exception 'Unable to restore this version.';
+  end if;
+
+  perform set_config('app.skip_component_version_snapshot', '1', true);
+
+  update public.community_components
+  set
+    name = target_version.name,
+    category = target_version.category,
+    description = target_version.description,
+    language = coalesce(target_version.language, 'typescript'),
+    tsx = target_version.tsx,
+    js = target_version.js,
+    html = target_version.html,
+    css = coalesce(target_version.css, ''),
+    status = target_version.status
+  where id = target_version.component_id
+    and owner_id = auth.uid()::text
+  returning *
+  into restored_component;
+
+  if restored_component.id is null then
+    raise exception 'Unable to restore this version.';
+  end if;
+
+  update public.community_component_versions
+  set is_current = (id = target_version.id)
+  where component_id = target_version.component_id;
+
+  return restored_component;
 end;
 $$;
 
@@ -237,6 +302,12 @@ create policy "Owners can insert their own component versions"
   to authenticated
   with check (auth.uid()::text = owner_id);
 
+create policy "Owners can delete their own component versions"
+  on public.community_component_versions
+  for delete
+  to authenticated
+  using (auth.uid()::text = owner_id);
+
 insert into public.community_component_versions (
   component_id,
   owner_id,
@@ -249,7 +320,8 @@ insert into public.community_component_versions (
   html,
   css,
   status,
-  version_number
+  version_number,
+  is_current
 )
 select
   component.id,
@@ -263,13 +335,28 @@ select
   component.html,
   component.css,
   component.status,
-  1
+  1,
+  false
 from public.community_components component
 where not exists (
   select 1
   from public.community_component_versions version
   where version.component_id = component.id
 );
+
+with ranked_versions as (
+  select
+    version.id,
+    row_number() over (
+      partition by version.component_id
+      order by version.version_number desc, version.created_at desc
+    ) as version_rank
+  from public.community_component_versions version
+)
+update public.community_component_versions version
+set is_current = (ranked_versions.version_rank = 1)
+from ranked_versions
+where version.id = ranked_versions.id;
 
 update public.community_components component
 set

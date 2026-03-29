@@ -33,6 +33,20 @@ If you also want likes, bookmarks, forks, and version history on an older projec
 
 1. `/Users/jaiminmukeshjariwala/Documents/PERSONAL-PROJECTS/WEB-DEV/NEXT-JS/component-library/supabase/community-features.sql`
 
+If your project already has version history and you want restore actions to mark an older version as current without creating a new version row, run:
+
+1. `/Users/jaiminmukeshjariwala/Documents/PERSONAL-PROJECTS/WEB-DEV/NEXT-JS/component-library/supabase/version-history-upgrade.sql`
+
+If you want your main account to be able to delete any community component from the UI, run:
+
+1. `/Users/jaiminmukeshjariwala/Documents/PERSONAL-PROJECTS/WEB-DEV/NEXT-JS/component-library/supabase/community-admins.sql`
+
+Before you run it, replace:
+
+- `replace-with-your-main-email@example.com`
+
+with the email address of the account that should have admin delete access.
+
 If you already ran an older Clerk-oriented migration on this same project, rerun:
 
 1. `/Users/jaiminmukeshjariwala/Documents/PERSONAL-PROJECTS/WEB-DEV/NEXT-JS/component-library/supabase/auth-upgrade.sql`

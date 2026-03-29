@@ -35,9 +35,7 @@ export interface ShowcaseItem {
   slug?: string;
   status?: string;
   forkedFromId?: string | null;
-  likeCount?: number;
   bookmarkCount?: number;
-  viewerHasLiked?: boolean;
   viewerHasBookmarked?: boolean;
 }
 
@@ -81,5 +79,6 @@ export interface CommunityComponentVersionRow {
   css: string | null;
   status: string;
   version_number: number;
+  is_current: boolean;
   created_at: string;
 }

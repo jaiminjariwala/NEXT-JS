@@ -47,9 +47,11 @@ begin
   if to_regclass('public.community_component_versions') is not null then
     execute 'drop policy if exists "Owners can view their own component versions" on public.community_component_versions';
     execute 'drop policy if exists "Owners can insert their own component versions" on public.community_component_versions';
+    execute 'drop policy if exists "Owners can delete their own component versions" on public.community_component_versions';
 
     execute 'create policy "Owners can view their own component versions" on public.community_component_versions for select to authenticated using (auth.uid()::text = owner_id)';
     execute 'create policy "Owners can insert their own component versions" on public.community_component_versions for insert to authenticated with check (auth.uid()::text = owner_id)';
+    execute 'create policy "Owners can delete their own component versions" on public.community_component_versions for delete to authenticated using (auth.uid()::text = owner_id)';
   end if;
 end
 $$;
