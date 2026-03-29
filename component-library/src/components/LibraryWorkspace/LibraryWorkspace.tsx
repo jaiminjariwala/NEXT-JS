@@ -1,13 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  SignInButton,
-  SignUpButton,
-  useAuth,
-  useClerk,
-  useUser,
-} from "@clerk/nextjs";
 import Image from "next/image";
 import { Geist_Mono } from "next/font/google";
 import MonacoEditor, {
@@ -32,8 +25,9 @@ import { showcaseItems as officialShowcaseItems } from "@/data/componentsData";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { CommunitySandboxPreview } from "./CommunitySandboxPreview";
-import { useSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapCommunityRowToShowcaseItem } from "@/lib/community-components";
+import type { Session } from "@/lib/supabase/client";
 import type {
   CommunityComponentRow,
   CommunityComponentReactionRow,
@@ -647,10 +641,9 @@ function getPreviewFrameStyle(itemId: string): React.CSSProperties | undefined {
 }
 
 export function LibraryWorkspace() {
-  const { isLoaded: isAuthLoaded, userId } = useAuth();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const supabaseClient = useSupabaseBrowserClient();
+  const supabaseClient = useMemo(() => getSupabaseBrowserClient(), []);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthHydrating, setIsAuthHydrating] = useState(true);
   const [publishedCommunityItems, setPublishedCommunityItems] = useState<ShowcaseItem[]>(
     []
   );
@@ -712,14 +705,13 @@ export function LibraryWorkspace() {
     codePanelWidth: DEFAULT_CODE_PANEL_WIDTH,
   });
 
-  const currentUserId = userId ?? null;
-  const isAuthHydrating = !isAuthLoaded;
-  const currentUserEmail =
-    user?.primaryEmailAddress?.emailAddress ??
-    user?.emailAddresses?.[0]?.emailAddress ??
-    user?.username ??
-    null;
-  const currentUserDisplayName = user?.fullName ?? currentUserEmail ?? "Community";
+  const currentUserId = session?.user.id ?? null;
+  const currentUserEmail = session?.user.email ?? null;
+  const currentUserDisplayName =
+    session?.user.user_metadata?.full_name ||
+    session?.user.user_metadata?.name ||
+    currentUserEmail?.split("@")[0] ||
+    "Community";
   const communityItems = useMemo(() => {
     if (!currentUserId) return publishedCommunityItems;
 
@@ -1033,9 +1025,42 @@ export function LibraryWorkspace() {
   );
 
   useEffect(() => {
-    if (!isAuthLoaded) return;
-    void refreshCommunityItems(currentUserId);
-  }, [currentUserId, isAuthLoaded, refreshCommunityItems]);
+    if (!supabaseClient) {
+      setIsAuthHydrating(false);
+      return;
+    }
+
+    let active = true;
+
+    supabaseClient.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!active) return;
+        setSession(data.session);
+        setIsAuthHydrating(false);
+        void refreshCommunityItems(data.session?.user.id ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSession(null);
+        setIsAuthHydrating(false);
+        void refreshCommunityItems(null);
+      });
+
+    const {
+      data: { subscription },
+    } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
+      setSession(nextSession);
+      setIsAuthHydrating(false);
+      void refreshCommunityItems(nextSession?.user.id ?? null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [refreshCommunityItems, supabaseClient]);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -1494,8 +1519,25 @@ export function LibraryWorkspace() {
     setIsSavingComponent(false);
   };
 
+  const handleOAuthSignIn = async (provider: "google" | "github") => {
+    if (!supabaseClient) return;
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo:
+          typeof window !== "undefined" ? window.location.origin : undefined,
+      },
+    });
+
+    if (error) {
+      window.alert(error.message);
+    }
+  };
+
   const handleSignOut = async () => {
-    await signOut();
+    if (!supabaseClient) return;
+    await supabaseClient.auth.signOut();
   };
 
   const handleDeleteComponent = async (item: ShowcaseItem) => {
@@ -2083,19 +2125,24 @@ export function LibraryWorkspace() {
             ) : (
               <div className="rounded-lg border border-black/8 bg-[#fafafa] p-2">
                 <div className="text-[13px] leading-[1.4] text-black/62">
-                  Sign in to create drafts and publish your own components.
+                  Sign in with Google or GitHub to create drafts and publish your own
+                  components.
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <SignInButton mode="modal">
-                    <button type="button" className={secondaryButtonClassName}>
-                      Sign in
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button type="button" className={secondaryButtonClassName}>
-                      Create account
-                    </button>
-                  </SignUpButton>
+                  <button
+                    type="button"
+                    onClick={() => void handleOAuthSignIn("google")}
+                    className={secondaryButtonClassName}
+                  >
+                    Continue with Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleOAuthSignIn("github")}
+                    className={secondaryButtonClassName}
+                  >
+                    Continue with GitHub
+                  </button>
                 </div>
               </div>
             )}

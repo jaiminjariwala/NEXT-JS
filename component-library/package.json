@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@babel/standalone": "^7.28.5",
-    "@clerk/nextjs": "^7.0.7",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/fiber": "^9.5.0",
     "@react-three/rapier": "^2.2.0",
