@@ -1519,7 +1519,7 @@ export function LibraryWorkspace() {
     setIsSavingComponent(false);
   };
 
-  const handleOAuthSignIn = async (provider: "google" | "github") => {
+  const handleOAuthSignIn = async (provider: "github") => {
     if (!supabaseClient) return;
 
     const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -2125,17 +2125,10 @@ export function LibraryWorkspace() {
             ) : (
               <div className="rounded-lg border border-black/8 bg-[#fafafa] p-2">
                 <div className="text-[13px] leading-[1.4] text-black/62">
-                  Sign in with Google or GitHub to create drafts and publish your own
+                  Sign in with GitHub to create drafts and publish your own
                   components.
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleOAuthSignIn("google")}
-                    className={secondaryButtonClassName}
-                  >
-                    Continue with Google
-                  </button>
                   <button
                     type="button"
                     onClick={() => void handleOAuthSignIn("github")}

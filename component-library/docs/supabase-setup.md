@@ -45,9 +45,9 @@ In Supabase:
 
 1. Open `Authentication`.
 2. Open `Sign In / Providers`.
-3. Enable `Google`.
-4. Enable `GitHub`.
-5. Add the callback URLs Supabase gives you in the Google and GitHub developer consoles.
+3. Enable `GitHub`.
+4. Add the callback URL Supabase gives you in the GitHub developer console.
+5. Enable `Google` later when you are ready.
 
 Then open `Authentication -> URL Configuration` and add:
 
