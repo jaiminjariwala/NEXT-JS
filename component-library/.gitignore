@@ -50,3 +50,5 @@ dist/
 
 # System
 .DS_Store
+# clerk configuration (can include secrets)
+/.clerk/

@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  SignInButton,
+  SignUpButton,
+  useAuth,
+  useClerk,
+  useUser,
+} from "@clerk/nextjs";
 import Image from "next/image";
 import { Geist_Mono } from "next/font/google";
 import MonacoEditor, {
@@ -25,9 +32,8 @@ import { showcaseItems as officialShowcaseItems } from "@/data/componentsData";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { CommunitySandboxPreview } from "./CommunitySandboxPreview";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapCommunityRowToShowcaseItem } from "@/lib/community-components";
-import type { Session } from "@supabase/supabase-js";
 import type {
   CommunityComponentRow,
   CommunityComponentReactionRow,
@@ -71,7 +77,6 @@ type CodeTab = {
 };
 
 type EditableCodeSegments = Partial<Record<CodeTabId, string>>;
-type AuthMode = "sign-in" | "sign-up";
 type ComponentStatus = "draft" | "published";
 type ComponentComposerMode = "react" | "html";
 
@@ -642,18 +647,14 @@ function getPreviewFrameStyle(itemId: string): React.CSSProperties | undefined {
 }
 
 export function LibraryWorkspace() {
+  const { isLoaded: isAuthLoaded, userId } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const supabaseClient = useSupabaseBrowserClient();
   const [publishedCommunityItems, setPublishedCommunityItems] = useState<ShowcaseItem[]>(
     []
   );
   const [ownedCommunityItems, setOwnedCommunityItems] = useState<ShowcaseItem[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isAuthHydrating, setIsAuthHydrating] = useState(true);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>("sign-in");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authMessage, setAuthMessage] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerState, setComposerState] = useState<ComponentComposerState>(
     createInitialComposerState
@@ -711,7 +712,14 @@ export function LibraryWorkspace() {
     codePanelWidth: DEFAULT_CODE_PANEL_WIDTH,
   });
 
-  const currentUserId = session?.user.id ?? null;
+  const currentUserId = userId ?? null;
+  const isAuthHydrating = !isAuthLoaded;
+  const currentUserEmail =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses?.[0]?.emailAddress ??
+    user?.username ??
+    null;
+  const currentUserDisplayName = user?.fullName ?? currentUserEmail ?? "Community";
   const communityItems = useMemo(() => {
     if (!currentUserId) return publishedCommunityItems;
 
@@ -930,8 +938,7 @@ export function LibraryWorkspace() {
   );
 
   const refreshCommunityItems = useCallback(
-    async (activeSession: Session | null) => {
-      const supabaseClient = getSupabaseBrowserClient();
+    async (activeUserId: string | null) => {
       if (!supabaseClient) {
         setPublishedCommunityItems([]);
         setOwnedCommunityItems([]);
@@ -948,18 +955,18 @@ export function LibraryWorkspace() {
             .select(selectColumns)
             .eq("status", "published")
             .order("created_at", { ascending: false }),
-          activeSession?.user.id
+          activeUserId
             ? supabaseClient
                 .from("community_components")
                 .select(selectColumns)
-                .eq("owner_id", activeSession.user.id)
+                .eq("owner_id", activeUserId)
                 .order("updated_at", { ascending: false })
             : Promise.resolve({ data: [], error: null }),
-          activeSession?.user.id && includeReactions
+          activeUserId && includeReactions
             ? supabaseClient
                 .from("community_component_reactions")
                 .select("component_id, reaction_type")
-                .eq("user_id", activeSession.user.id)
+                .eq("user_id", activeUserId)
             : Promise.resolve({ data: [], error: null }),
         ]);
 
@@ -1018,51 +1025,17 @@ export function LibraryWorkspace() {
             mapCommunityRowToShowcaseItem(row as CommunityComponentRow, viewerReactions)
           )
         );
-      } else if (!activeSession?.user.id) {
+      } else if (!activeUserId) {
         setOwnedCommunityItems([]);
       }
     },
-    [supportsCommunityFeatureSchema]
+    [supabaseClient, supportsCommunityFeatureSchema]
   );
 
   useEffect(() => {
-    const supabaseClient = getSupabaseBrowserClient();
-    if (!supabaseClient) {
-      setIsAuthHydrating(false);
-      return;
-    }
-
-    let active = true;
-
-    supabaseClient.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!active) return;
-        setSession(data.session);
-        setIsAuthHydrating(false);
-        void refreshCommunityItems(data.session);
-      })
-      .catch(() => {
-        if (!active) return;
-        setSession(null);
-        setIsAuthHydrating(false);
-        void refreshCommunityItems(null);
-      });
-
-    const {
-      data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
-      if (!active) return;
-      setSession(nextSession);
-      setIsAuthHydrating(false);
-      void refreshCommunityItems(nextSession);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, [refreshCommunityItems]);
+    if (!isAuthLoaded) return;
+    void refreshCommunityItems(currentUserId);
+  }, [currentUserId, isAuthLoaded, refreshCommunityItems]);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -1496,19 +1469,6 @@ export function LibraryWorkspace() {
     setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
   };
 
-  const openAuthModal = (mode: AuthMode) => {
-    setAuthMode(mode);
-    setAuthError("");
-    setAuthMessage("");
-    setIsAuthModalOpen(true);
-  };
-
-  const closeAuthModal = () => {
-    setIsAuthModalOpen(false);
-    setAuthError("");
-    setAuthMessage("");
-  };
-
   const openComposer = (item?: ShowcaseItem) => {
     const nextState = item ? createComposerStateFromItem(item) : createInitialComposerState();
     setComposerTargetItem(item ?? null);
@@ -1534,61 +1494,16 @@ export function LibraryWorkspace() {
     setIsSavingComponent(false);
   };
 
-  const handleAuthSubmit = async (mode: AuthMode) => {
-    const supabaseClient = getSupabaseBrowserClient();
-    if (!supabaseClient) {
-      setAuthError("Supabase is not configured in this app.");
-      return;
-    }
-
-    const trimmedEmail = authEmail.trim();
-    if (!trimmedEmail) {
-      setAuthError("Email is required.");
-      return;
-    }
-
-    setIsAuthenticating(true);
-    setAuthError("");
-    setAuthMessage("");
-
-    try {
-      const { error } = await supabaseClient.auth.signInWithOtp({
-        email: trimmedEmail,
-        options: {
-          shouldCreateUser: mode === "sign-up",
-          emailRedirectTo:
-            typeof window !== "undefined" ? window.location.origin : undefined,
-        },
-      });
-
-      if (error) throw error;
-
-      setAuthMessage(
-        mode === "sign-up"
-          ? "Check your email for the account link. Open it in this browser to finish creating your account."
-          : "Check your email for the sign-in link. Open it in this browser to continue."
-      );
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Authentication failed.");
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
   const handleSignOut = async () => {
-    const supabaseClient = getSupabaseBrowserClient();
-    if (!supabaseClient) return;
-
-    await supabaseClient.auth.signOut();
+    await signOut();
   };
 
   const handleDeleteComponent = async (item: ShowcaseItem) => {
-    const supabaseClient = getSupabaseBrowserClient();
     if (
       !supabaseClient ||
-      !session?.user.id ||
+      !currentUserId ||
       item.source !== "community" ||
-      item.ownerId !== session.user.id ||
+      item.ownerId !== currentUserId ||
       !item.id
     ) {
       return;
@@ -1603,7 +1518,7 @@ export function LibraryWorkspace() {
       .from("community_components")
       .delete()
       .eq("id", getCommunityRowId(item.id))
-      .eq("owner_id", session.user.id);
+      .eq("owner_id", currentUserId);
 
     if (error) {
       window.alert(error.message);
@@ -1647,8 +1562,7 @@ export function LibraryWorkspace() {
   );
 
   const handlePersistEditedCode = async () => {
-    const supabaseClient = getSupabaseBrowserClient();
-    if (!supabaseClient || !session?.user.id || !isOwnedCommunityItem || !hasEditableCodeChanges) {
+    if (!supabaseClient || !currentUserId || !isOwnedCommunityItem || !hasEditableCodeChanges) {
       return;
     }
 
@@ -1667,7 +1581,7 @@ export function LibraryWorkspace() {
         .from("community_components")
         .update(payload)
         .eq("id", getCommunityRowId(selectedItem.id))
-        .eq("owner_id", session.user.id)
+        .eq("owner_id", currentUserId)
         .select(
           supportsCommunityFeatureSchema
             ? extendedCommunityComponentSelect
@@ -1696,10 +1610,9 @@ export function LibraryWorkspace() {
   };
 
   const handleToggleReaction = async (reactionType: "like" | "bookmark") => {
-    const supabaseClient = getSupabaseBrowserClient();
     if (
       !supabaseClient ||
-      !session?.user.id ||
+      !currentUserId ||
       selectedItem.source !== "community" ||
       !supportsCommunityFeatureSchema
     ) {
@@ -1721,7 +1634,7 @@ export function LibraryWorkspace() {
           .from("community_component_reactions")
           .delete()
           .eq("component_id", rowId)
-          .eq("user_id", session.user.id)
+          .eq("user_id", currentUserId)
           .eq("reaction_type", reactionType);
 
         if (error) throw error;
@@ -1730,7 +1643,7 @@ export function LibraryWorkspace() {
           .from("community_component_reactions")
           .insert({
             component_id: rowId,
-            user_id: session.user.id,
+            user_id: currentUserId,
             reaction_type: reactionType,
           });
 
@@ -1762,7 +1675,7 @@ export function LibraryWorkspace() {
   };
 
   const handleForkSelectedComponent = async () => {
-    if (!session?.user.id || selectedItem.source !== "community") {
+    if (!currentUserId || selectedItem.source !== "community") {
       return;
     }
 
@@ -1791,10 +1704,9 @@ export function LibraryWorkspace() {
   };
 
   const handleOpenVersionHistory = async () => {
-    const supabaseClient = getSupabaseBrowserClient();
     if (
       !supabaseClient ||
-      !session?.user.id ||
+      !currentUserId ||
       !isOwnedCommunityItem ||
       !supportsCommunityFeatureSchema
     ) {
@@ -1825,10 +1737,9 @@ export function LibraryWorkspace() {
   };
 
   const handleRestoreVersion = async (version: CommunityComponentVersionRow) => {
-    const supabaseClient = getSupabaseBrowserClient();
     if (
       !supabaseClient ||
-      !session?.user.id ||
+      !currentUserId ||
       !isOwnedCommunityItem ||
       !supportsCommunityFeatureSchema
     ) {
@@ -1852,7 +1763,7 @@ export function LibraryWorkspace() {
           status: version.status,
         })
         .eq("id", version.component_id)
-        .eq("owner_id", session.user.id)
+        .eq("owner_id", currentUserId)
         .select(extendedCommunityComponentSelect)
         .single();
 
@@ -1936,8 +1847,7 @@ export function LibraryWorkspace() {
   };
 
   const handleSaveComponent = async () => {
-    const supabaseClient = getSupabaseBrowserClient();
-    if (!supabaseClient || !session?.user.id) {
+    if (!supabaseClient || !currentUserId) {
       setComposerError("Sign in before creating a component.");
       return;
     }
@@ -1978,16 +1888,15 @@ export function LibraryWorkspace() {
     setComposerError("");
 
     const isEditingOwnedItem =
-      Boolean(composerTargetItem) && composerTargetItem?.ownerId === session.user.id;
+      Boolean(composerTargetItem) && composerTargetItem?.ownerId === currentUserId;
 
     const authorName =
-      session.user.user_metadata?.full_name ||
-      session.user.user_metadata?.name ||
-      session.user.email?.split("@")[0] ||
+      currentUserDisplayName ||
+      currentUserEmail?.split("@")[0] ||
       "Community";
 
     const payload = {
-      owner_id: session.user.id,
+      owner_id: currentUserId,
       slug: trimmedSlug,
       name: trimmedName,
       category: composerState.category.trim() || null,
@@ -2027,7 +1936,7 @@ export function LibraryWorkspace() {
             .from("community_components")
             .update(payloadWithFork)
             .eq("id", getCommunityRowId(composerTargetItem.id))
-            .eq("owner_id", session.user.id)
+            .eq("owner_id", currentUserId)
             .select(
               supportsCommunityFeatureSchema
                 ? extendedCommunityComponentSelect
@@ -2149,10 +2058,10 @@ export function LibraryWorkspace() {
                   Restoring session...
                 </div>
               </div>
-            ) : session ? (
+            ) : currentUserId ? (
               <div className="rounded-lg border border-black/8 bg-[#fafafa] p-2">
                 <div className="truncate text-[13px] leading-[1.3] text-black/72">
-                  {session.user.email}
+                  {currentUserEmail}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -2170,11 +2079,6 @@ export function LibraryWorkspace() {
                     Sign out
                   </button>
                 </div>
-                {authMessage ? (
-                  <div className="mt-2 text-[12px] leading-[1.4] text-black/55">
-                    {authMessage}
-                  </div>
-                ) : null}
               </div>
             ) : (
               <div className="rounded-lg border border-black/8 bg-[#fafafa] p-2">
@@ -2182,20 +2086,16 @@ export function LibraryWorkspace() {
                   Sign in to create drafts and publish your own components.
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal("sign-in")}
-                    className={secondaryButtonClassName}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal("sign-up")}
-                    className={secondaryButtonClassName}
-                  >
-                    Sign up
-                  </button>
+                  <SignInButton mode="modal">
+                    <button type="button" className={secondaryButtonClassName}>
+                      Sign in
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button type="button" className={secondaryButtonClassName}>
+                      Create account
+                    </button>
+                  </SignUpButton>
                 </div>
               </div>
             )}
@@ -2229,7 +2129,7 @@ export function LibraryWorkspace() {
                 })}
               </div>
 
-              {session ? (
+              {currentUserId ? (
                 <div className="flex flex-col gap-[2px]">
                   <div
                     className={`${geistMono.className} px-2 pb-1 text-[11px] uppercase tracking-[0.08em] text-black/35`}
@@ -2371,7 +2271,7 @@ export function LibraryWorkspace() {
                     type="button"
                     onClick={() => void handleToggleReaction("like")}
                     disabled={
-                      !session ||
+                      !currentUserId ||
                       !supportsCommunityFeatureSchema ||
                       isTogglingReaction === "like"
                     }
@@ -2379,7 +2279,7 @@ export function LibraryWorkspace() {
                       selectedItem.viewerHasLiked
                         ? "border-black bg-black text-white"
                         : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white"
-                    } ${!session || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
+                    } ${!currentUserId || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
                   >
                     <Heart size={13} strokeWidth={1.8} />
                     {selectedItem.likeCount ?? 0}
@@ -2388,7 +2288,7 @@ export function LibraryWorkspace() {
                     type="button"
                     onClick={() => void handleToggleReaction("bookmark")}
                     disabled={
-                      !session ||
+                      !currentUserId ||
                       !supportsCommunityFeatureSchema ||
                       isTogglingReaction === "bookmark"
                     }
@@ -2396,12 +2296,12 @@ export function LibraryWorkspace() {
                       selectedItem.viewerHasBookmarked
                         ? "border-black bg-black text-white"
                         : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white"
-                    } ${!session || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
+                    } ${!currentUserId || !supportsCommunityFeatureSchema ? "cursor-not-allowed opacity-45" : ""}`}
                   >
                     <Bookmark size={13} strokeWidth={1.8} />
                     {selectedItem.bookmarkCount ?? 0}
                   </button>
-                  {session ? (
+                  {currentUserId ? (
                     <button
                       type="button"
                       onClick={() => void handleForkSelectedComponent()}
@@ -2613,112 +2513,6 @@ export function LibraryWorkspace() {
           </section>
         </div>
       </div>
-
-      {isAuthModalOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/12 px-6"
-          onClick={closeAuthModal}
-        >
-          <div
-            className="w-full max-w-[420px] rounded-[18px] border border-black/8 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[18px] leading-none text-black">
-                  {authMode === "sign-in" ? "Sign in" : "Sign up"}
-                </div>
-                <div className="mt-2 text-[13px] leading-[1.45] text-black/55">
-                  {authMode === "sign-in"
-                    ? "Use a passwordless email link to create and manage components without browser Touch ID or saved-password issues."
-                    : "Create an account with a passwordless email link, then save drafts and publish components."}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={closeAuthModal}
-                className={secondaryButtonClassName}
-              >
-                Close
-              </button>
-            </div>
-
-            <form
-              className="mt-5 space-y-4"
-              autoComplete="off"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void handleAuthSubmit(authMode);
-              }}
-            >
-              <label className="block">
-                <div className="mb-2 text-[13px] leading-none text-black/55">Email</div>
-                <input
-                  type="text"
-                  inputMode="email"
-                  name="component-library-email"
-                  value={authEmail}
-                  onChange={(event) => setAuthEmail(event.target.value)}
-                  autoComplete="email"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  data-form-type="other"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  data-bwignore="true"
-                  className="w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-[15px] leading-[1.2] text-black outline-none transition-colors focus:border-black/25"
-                  placeholder="you@example.com"
-                />
-              </label>
-            </form>
-
-            {authError ? (
-              <div className="mt-4 rounded-lg border border-[#efc7c7] bg-[#fff7f7] px-3 py-2 text-[13px] leading-[1.5] text-[#b91c1c]">
-                {authError}
-              </div>
-            ) : null}
-
-            {authMessage ? (
-              <div className="mt-4 rounded-lg border border-black/8 bg-[#fafafa] px-3 py-2 text-[13px] leading-[1.5] text-black/62">
-                {authMessage}
-              </div>
-            ) : null}
-
-            <div className="mt-4 text-[12px] leading-[1.5] text-black/45">
-              Open the email link in this same browser so the session can be restored here.
-            </div>
-
-            <div className="mt-5 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleAuthSubmit(authMode)}
-                disabled={isAuthenticating}
-                className={secondaryButtonClassName}
-              >
-                {isAuthenticating
-                  ? authMode === "sign-in"
-                    ? "Sending..."
-                    : "Sending..."
-                  : authMode === "sign-in"
-                    ? "Send sign-in link"
-                    : "Send sign-up link"}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setAuthMode((current) =>
-                    current === "sign-in" ? "sign-up" : "sign-in"
-                  )
-                }
-                className={secondaryButtonClassName}
-              >
-                {authMode === "sign-in" ? "Need an account?" : "Have an account?"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {isHistoryModalOpen ? (
         <div

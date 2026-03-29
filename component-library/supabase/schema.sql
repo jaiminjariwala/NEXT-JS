@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.community_components (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid references auth.users(id) on delete cascade,
+  owner_id text,
   forked_from_id uuid references public.community_components(id) on delete set null,
   slug text not null unique,
   name text not null,
@@ -29,7 +29,7 @@ create index if not exists community_components_forked_from_id_idx
 
 create table if not exists public.community_component_reactions (
   component_id uuid not null references public.community_components(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id text not null,
   reaction_type text not null check (reaction_type in ('like', 'bookmark')),
   created_at timestamptz not null default timezone('utc', now()),
   primary key (component_id, user_id, reaction_type)
@@ -41,7 +41,7 @@ create index if not exists community_component_reactions_user_id_idx
 create table if not exists public.community_component_versions (
   id uuid primary key default gen_random_uuid(),
   component_id uuid not null references public.community_components(id) on delete cascade,
-  owner_id uuid references auth.users(id) on delete cascade,
+  owner_id text,
   name text not null,
   category text,
   description text,
@@ -194,7 +194,7 @@ create policy "Owners can view their own community components"
   on public.community_components
   for select
   to authenticated
-  using (auth.uid() = owner_id);
+  using ((select auth.jwt()->>'sub') = owner_id);
 
 drop policy if exists "Authenticated users can insert their own community components"
   on public.community_components;
@@ -202,7 +202,7 @@ create policy "Authenticated users can insert their own community components"
   on public.community_components
   for insert
   to authenticated
-  with check (auth.uid() = owner_id);
+  with check ((select auth.jwt()->>'sub') = owner_id);
 
 drop policy if exists "Authenticated users can update their own community components"
   on public.community_components;
@@ -210,8 +210,8 @@ create policy "Authenticated users can update their own community components"
   on public.community_components
   for update
   to authenticated
-  using (auth.uid() = owner_id)
-  with check (auth.uid() = owner_id);
+  using ((select auth.jwt()->>'sub') = owner_id)
+  with check ((select auth.jwt()->>'sub') = owner_id);
 
 drop policy if exists "Authenticated users can delete their own community components"
   on public.community_components;
@@ -219,7 +219,7 @@ create policy "Authenticated users can delete their own community components"
   on public.community_components
   for delete
   to authenticated
-  using (auth.uid() = owner_id);
+  using ((select auth.jwt()->>'sub') = owner_id);
 
 drop policy if exists "Authenticated users can view their own component reactions"
   on public.community_component_reactions;
@@ -227,7 +227,7 @@ create policy "Authenticated users can view their own component reactions"
   on public.community_component_reactions
   for select
   to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.jwt()->>'sub') = user_id);
 
 drop policy if exists "Authenticated users can insert their own component reactions"
   on public.community_component_reactions;
@@ -235,7 +235,7 @@ create policy "Authenticated users can insert their own component reactions"
   on public.community_component_reactions
   for insert
   to authenticated
-  with check (auth.uid() = user_id);
+  with check ((select auth.jwt()->>'sub') = user_id);
 
 drop policy if exists "Authenticated users can delete their own component reactions"
   on public.community_component_reactions;
@@ -243,7 +243,7 @@ create policy "Authenticated users can delete their own component reactions"
   on public.community_component_reactions
   for delete
   to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.jwt()->>'sub') = user_id);
 
 drop policy if exists "Owners can view their own component versions"
   on public.community_component_versions;
@@ -251,7 +251,7 @@ create policy "Owners can view their own component versions"
   on public.community_component_versions
   for select
   to authenticated
-  using (auth.uid() = owner_id);
+  using ((select auth.jwt()->>'sub') = owner_id);
 
 drop policy if exists "Owners can insert their own component versions"
   on public.community_component_versions;
@@ -259,4 +259,4 @@ create policy "Owners can insert their own component versions"
   on public.community_component_versions
   for insert
   to authenticated
-  with check (auth.uid() = owner_id);
+  with check ((select auth.jwt()->>'sub') = owner_id);

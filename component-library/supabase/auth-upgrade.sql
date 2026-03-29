@@ -5,4 +5,4 @@ create policy "Owners can view their own community components"
   on public.community_components
   for select
   to authenticated
-  using (auth.uid() = owner_id);
+  using ((select auth.jwt()->>'sub') = owner_id);
