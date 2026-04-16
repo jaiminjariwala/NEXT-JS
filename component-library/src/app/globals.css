@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Copernicus Trial";
+  src: url("/fonts/copernicus-font-family/CopernicusTrial-Book-BF66160450c2e92.ttf")
+    format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Copernicus Trial";
+  src: url("/fonts/copernicus-font-family/CopernicusTrial-Semibold-BF66160451692c7.ttf")
+    format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   width: 100%;
   height: 100%;

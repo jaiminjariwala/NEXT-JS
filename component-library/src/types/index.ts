@@ -1,6 +1,15 @@
 export type ComponentCodeLanguage = "typescript" | "javascript";
 export type ShowcaseSource = "official" | "community";
 export type ShowcasePreviewMode = "live" | "sandbox";
+export type ShowcaseAssetType = "file" | "folder";
+
+export interface ShowcaseAssetEntry {
+  name: string;
+  kind: string;
+  path: string;
+  type: ShowcaseAssetType;
+  children?: ShowcaseAssetEntry[];
+}
 
 export interface ShowcaseCode {
   tsx: string;
@@ -24,6 +33,7 @@ export interface ShowcaseItem {
   category: string;
   component: React.ComponentType;
   code: ShowcaseCode;
+  assets?: ShowcaseAssetEntry[];
   hidePreview?: boolean;
   source?: ShowcaseSource;
   previewMode?: ShowcasePreviewMode;

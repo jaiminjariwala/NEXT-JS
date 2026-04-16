@@ -1,4 +1,4 @@
-import { ComponentVersion, ShowcaseItem } from "@/types";
+import { ComponentVersion, ShowcaseAssetEntry, ShowcaseItem } from "@/types";
 import { FigmaCanvas } from "@/components/library/Canvas/FigmaCanvas/FigmaCanvas";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
@@ -6,9 +6,11 @@ import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCal
 import Card1 from "@/components/library/Card/Card1";
 import FoldingLetters from "@/components/library/Card/FoldingLetters";
 import HireMeLanyard from "@/components/library/Card/HireMeLanyard";
+import SummarySwipeDeck from "@/components/library/Card/SummarySwipeDeck";
 import ContactPage from "@/components/library/Contact/ContactPage";
 import Folder1 from "@/components/library/Folder/Folder1";
 import Drawer1 from "@/components/library/Drawer/Drawer1";
+import { ClaudeExcelModalShowcase } from "@/components/library/Modal/ClaudeExcelModalShowcase";
 import { contactPageCode } from "@/data/code/contactPageCode";
 import { foldingLettersCode } from "@/data/code/foldingLettersCode";
 import {
@@ -42,9 +44,66 @@ function expandShowcaseItem(item: VersionedShowcaseItem): ShowcaseItem[] {
     category: item.category,
     component: version.component,
     code: version.code,
+    assets: item.assets,
     hidePreview: item.hidePreview,
   }));
 }
+
+function assetFile(name: string, kind: string, path: string): ShowcaseAssetEntry {
+  return {
+    name,
+    kind,
+    path,
+    type: "file",
+  };
+}
+
+function assetFolder(
+  name: string,
+  path: string,
+  children: ShowcaseAssetEntry[]
+): ShowcaseAssetEntry {
+  return {
+    name,
+    kind: "Folder",
+    path,
+    type: "folder",
+    children,
+  };
+}
+
+const copernicusFontAssets = [
+  assetFolder("fonts", "/fonts", [
+    assetFolder("copernicus-font-family", "/fonts/copernicus-font-family", [
+      assetFile(
+        "CopernicusTrial-Book-BF66160450c2e92.ttf",
+        "TrueType font",
+        "/fonts/copernicus-font-family/CopernicusTrial-Book-BF66160450c2e92.ttf"
+      ),
+      assetFile(
+        "CopernicusTrial-Semibold-BF66160451692c7.ttf",
+        "TrueType font",
+        "/fonts/copernicus-font-family/CopernicusTrial-Semibold-BF66160451692c7.ttf"
+      ),
+      assetFile(
+        "Befonts-License.txt",
+        "Text document",
+        "/fonts/copernicus-font-family/Befonts-License.txt"
+      ),
+    ]),
+  ]),
+];
+
+const contactCardAssets = [
+  assetFile("hand-cursor.png", "PNG image", "/hand-cursor.png"),
+  assetFile("paper-clip.png", "PNG image", "/paper-clip.png"),
+];
+
+const glassFolderAssets = [
+  assetFile("photo-1.jpeg", "JPEG image", "/photo-1.jpeg"),
+  assetFile("photo-2.jpeg", "JPEG image", "/photo-2.jpeg"),
+  assetFile("photo-3.jpeg", "JPEG image", "/photo-3.jpeg"),
+];
 
 const baseShowcaseItems: VersionedShowcaseItem[] = [
   {
@@ -496,9 +555,23 @@ export default Card1;`,
     name: "Employee ID Card Lanyard",
     category: "Card",
     component: HireMeLanyard,
+    assets: [assetFile("my-profile-1.png", "PNG image", "/my-profile-1.png")],
     code: {
       tsx: hireMeLanyardCode,
       css: hireMeLanyardCss,
+    },
+  },
+  {
+    id: "summary-swipe-deck-1",
+    name: "Summary Swipe Deck",
+    category: "Card",
+    component: SummarySwipeDeck,
+    assets: copernicusFontAssets,
+    code: {
+      tsx: `'use client';
+// See SummarySwipeDeck.tsx for full source`,
+      css: `/* No external CSS needed - uses Tailwind classes and framer-motion */`,
+      sourcePath: "/code/summary-swipe-deck.tsx.txt",
     },
   },
   {
@@ -506,6 +579,7 @@ export default Card1;`,
     name: "Contact Me (Mail) Card",
     category: "Contact",
     component: ContactPage,
+    assets: contactCardAssets,
     code: {
       tsx: contactPageCode,
       css: `/* Styling is included inside the component for this showcase */`,
@@ -518,6 +592,7 @@ export default Card1;`,
     name: "Glass Folder",
     category: "Folder",
     component: Folder1,
+    assets: glassFolderAssets,
     code: {
       tsx: `import React, { useState } from 'react';
 
@@ -687,6 +762,19 @@ const styles: { [key: string]: React.CSSProperties } = {
 
 export default RefinedGlassFolder;`,
       css: `/* No external CSS needed - uses inline styles */`,
+    },
+  },
+  {
+    id: "claude-excel-modal-1",
+    name: "Claude Excel Modal",
+    category: "Modal",
+    component: ClaudeExcelModalShowcase,
+    assets: copernicusFontAssets,
+    code: {
+      tsx: `'use client';
+// See ClaudeExcelModalShowcase.tsx for full source`,
+      css: `/* No external CSS needed - uses Tailwind classes */`,
+      sourcePath: "/code/claude-excel-modal-showcase.tsx.txt",
     },
   },
   {

@@ -186,11 +186,14 @@ export const CodeModal: React.FC<CodeModalProps> = ({
     : "typescript";
   const codeLabel = codeLanguage === "javascript" ? "js" : "tsx";
   const isLanyardPreview = componentName === "Employee ID Card Lanyard";
+  const isClaudeExcelModalPreview = componentName === "Claude Excel Modal";
   const previewScale =
     componentName === "Figma Canvas"
       ? 0.9
       : componentName === "Contact Page"
         ? 1
+      : isClaudeExcelModalPreview
+        ? 0.58
       : isLanyardPreview
         ? 1
         : 0.7;
@@ -202,6 +205,11 @@ export const CodeModal: React.FC<CodeModalProps> = ({
         ["--hire-r3f-width" as string]: "100%",
         ["--hire-r3f-height" as string]: "100%",
       } as React.CSSProperties)
+    : isClaudeExcelModalPreview
+      ? ({
+          ["--preview-scale" as string]: 0.58,
+          ["--preview-content-width" as string]: "1160px",
+        } as React.CSSProperties)
     : ({ ["--preview-scale" as string]: previewScale } as React.CSSProperties);
   const livePreviewCode = useMemo(
     () => buildLivePreviewCode(editedCode),

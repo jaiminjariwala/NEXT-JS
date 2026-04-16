@@ -25,6 +25,7 @@ import { showcaseItems as officialShowcaseItems } from "@/data/componentsData";
 import { AnalogClock } from "@/components/library/Clock/AnalogClock/AnalogClock";
 import { DateCalendar } from "@/components/library/Calendar/DateCalendar/DateCalendar";
 import { CommunitySandboxPreview } from "./CommunitySandboxPreview";
+import { AssetsPanel } from "./AssetsPanel";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapCommunityRowToShowcaseItem } from "@/lib/community-components";
 import type { Session } from "@/lib/supabase/client";
@@ -44,12 +45,12 @@ const codeEditorPaddingTop = 72;
 const codeEditorPaddingBottom = 28;
 const monacoThemeName = "component-library-light";
 const defaultSelectedItemId = "contact-page-1";
-const DEFAULT_SIDEBAR_WIDTH = 220;
-const MIN_SIDEBAR_WIDTH = 170;
+const DEFAULT_SIDEBAR_WIDTH = 200;
+const MIN_SIDEBAR_WIDTH = 148;
 const SIDEBAR_COLLAPSE_THRESHOLD = 96;
-const DEFAULT_CODE_PANEL_WIDTH = 540;
+const DEFAULT_CODE_PANEL_WIDTH = 480;
 const MIN_PREVIEW_PANEL_WIDTH = 360;
-const MIN_CODE_PANEL_WIDTH = 400;
+const MIN_CODE_PANEL_WIDTH = 340;
 const RESIZE_HANDLE_WIDTH = 1;
 const baseCommunityComponentSelect =
   "id, slug, owner_id, name, category, author_name, description, language, tsx, js, html, css, status, created_at, updated_at";
@@ -90,6 +91,8 @@ type ComponentComposerState = {
 
 const secondaryButtonClassName =
   "flex items-center rounded-lg border border-black/8 bg-[#F5F5F5] px-2 py-[5px] text-[15px] leading-[1.1] font-normal text-black transition-all duration-200 hover:bg-white active:scale-95";
+const elevatedSecondaryButtonClassName =
+  `${secondaryButtonClassName} shadow-[0_6px_20px_rgba(15,23,42,0.08)]`;
 const sidebarActionButtonClassName =
   secondaryButtonClassName;
 
@@ -610,6 +613,8 @@ function getPreviewScale(itemId: string, previewPanelWidth = 0): number {
   switch (itemId) {
     case "card-v1":
       return 0.58;
+    case "claude-excel-modal-1":
+      return 1;
     case "figma-canvas":
       if (!previewPanelWidth) return 1;
       return Math.min(Math.max((previewPanelWidth - 48) / 480, 0.62), 1.35);
@@ -707,10 +712,12 @@ export function LibraryWorkspace() {
   const [activeCodeTabId, setActiveCodeTabId] = useState<CodeTabId>(() =>
     getDefaultCodeTabId(defaultSelectedItem.code)
   );
+  const [isAssetsTabActive, setIsAssetsTabActive] = useState(false);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [codePanelWidth, setCodePanelWidth] = useState(DEFAULT_CODE_PANEL_WIDTH);
+  const [isCleanPreviewMode, setIsCleanPreviewMode] = useState(false);
   const [editedCodeSegments, setEditedCodeSegments] = useState<EditableCodeSegments>(
     () => buildEditableCodeSegments(defaultSelectedItem.code, defaultSelectedItem.code.tsx)
   );
@@ -866,8 +873,10 @@ export function LibraryWorkspace() {
   const activeCodeValue = activeCodeTab
     ? displayedCodeSegments[activeCodeTab.id] ?? activeCodeTab.value
     : "";
+  const hasAssetsTab = Boolean(selectedItem.assets?.length);
   const previewScale = getPreviewScale(selectedItem.id, previewPanelWidth);
   const previewFrameStyle = getPreviewFrameStyle(selectedItem.id);
+  const hasPreviewTopBar = selectedItem.source === "community" || Boolean(currentUserId);
   const previewContentStyle =
     selectedItem.id === "hire-me-lanyard-1"
       ? ({
@@ -877,10 +886,15 @@ export function LibraryWorkspace() {
           ["--hire-r3f-width" as string]: "100%",
           ["--hire-r3f-height" as string]: "100%",
         } as React.CSSProperties)
-      : selectedItem.id === "contact-page-1"
+      : selectedItem.id === "claude-excel-modal-1"
         ? ({
             ["--preview-scale" as string]: 1,
             ["--preview-content-width" as string]: "100%",
+          } as React.CSSProperties)
+      : selectedItem.id === "contact-page-1"
+        ? ({
+            ["--preview-scale" as string]: 1,
+            ["--preview-content-width" as string]: "min(100%, 640px)",
           } as React.CSSProperties)
       : ({ ["--preview-scale" as string]: previewScale } as React.CSSProperties);
   const livePreviewCode = useMemo(
@@ -1348,6 +1362,12 @@ export function LibraryWorkspace() {
   }, []);
 
   useEffect(() => {
+    if (!hasAssetsTab && isAssetsTabActive) {
+      setIsAssetsTabActive(false);
+    }
+  }, [hasAssetsTab, isAssetsTabActive]);
+
+  useEffect(() => {
     if (!isResizingSidebar) return;
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -1529,6 +1549,7 @@ export function LibraryWorkspace() {
     setCopied(false);
     setSaveFeedback("");
     setIsEditMode(false);
+    setIsAssetsTabActive(false);
     setEditedCodeSegments(buildEditableCodeSegments(item.code, item.code.tsx));
     setActiveCodeTabId(getDefaultCodeTabId(item.code));
     setSourceLoadError(false);
@@ -1591,6 +1612,16 @@ export function LibraryWorkspace() {
 
   const reopenSidebar = () => {
     setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+  };
+
+  const handleToggleCleanPreviewMode = () => {
+    if (isCleanPreviewMode) {
+      setSidebarWidth((currentWidth) =>
+        currentWidth === 0 ? DEFAULT_SIDEBAR_WIDTH : currentWidth
+      );
+    }
+
+    setIsCleanPreviewMode((current) => !current);
   };
 
   const openComposer = (item?: ShowcaseItem) => {
@@ -2159,7 +2190,7 @@ export function LibraryWorkspace() {
   return (
     <div className="h-screen overflow-hidden bg-[#f3f5f7] text-black">
       <div ref={workspaceRef} className="relative flex h-full min-w-[1180px]">
-        {sidebarWidth === 0 && (
+        {!isCleanPreviewMode && sidebarWidth === 0 && (
           <button
             type="button"
             onClick={reopenSidebar}
@@ -2171,7 +2202,7 @@ export function LibraryWorkspace() {
         )}
 
         <aside
-          className={`flex min-h-0 shrink-0 flex-col overflow-hidden bg-white ${
+          className={`${isCleanPreviewMode ? "hidden" : "flex"} min-h-0 shrink-0 flex-col overflow-hidden bg-white ${
             isResizingSidebar ? "" : "transition-[width] duration-150"
           }`}
           style={{ width: sidebarWidth }}
@@ -2449,7 +2480,7 @@ export function LibraryWorkspace() {
           aria-orientation="vertical"
           onPointerDown={handleSidebarResizeStart}
           onKeyDown={handleSidebarResizeKeyDown}
-          className={`relative shrink-0 bg-black/8 transition-colors focus:outline-none ${
+          className={`${isCleanPreviewMode ? "hidden" : "relative"} shrink-0 bg-black/8 transition-colors focus:outline-none ${
             isResizingSidebar ? "bg-black/20" : "hover:bg-black/14"
           }`}
           style={{ width: RESIZE_HANDLE_WIDTH }}
@@ -2458,7 +2489,7 @@ export function LibraryWorkspace() {
         </div>
 
         <div ref={contentPanelsRef} className="flex min-w-0 flex-1">
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
+          <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-white">
             {selectedItem.source === "community" ? (
               <div className="border-b border-black/8 px-4 py-3">
                 <div className="flex items-start justify-between gap-4">
@@ -2549,6 +2580,16 @@ export function LibraryWorkspace() {
               </div>
             ) : null}
 
+            <button
+              type="button"
+              onClick={handleToggleCleanPreviewMode}
+              aria-pressed={isCleanPreviewMode}
+              className={`${elevatedSecondaryButtonClassName} absolute right-4 z-20`}
+              style={{ top: hasPreviewTopBar ? 76 : 16 }}
+            >
+              {isCleanPreviewMode ? "Get back" : "Hide panels"}
+            </button>
+
             <div ref={previewPanelRef} className={workspaceStyles.panelScroll}>
               <div className={workspaceStyles.previewCanvas}>
                 {isSandboxPreview ? (
@@ -2615,7 +2656,7 @@ export function LibraryWorkspace() {
             aria-orientation="vertical"
             onPointerDown={handleResizeStart}
             onKeyDown={handleResizeKeyDown}
-            className={`relative shrink-0 bg-black/8 transition-colors focus:outline-none ${
+            className={`${isCleanPreviewMode ? "hidden" : "relative"} shrink-0 bg-black/8 transition-colors focus:outline-none ${
               isResizingPanels ? "bg-black/20" : "hover:bg-black/14"
             }`}
             style={{ width: RESIZE_HANDLE_WIDTH }}
@@ -2624,18 +2665,21 @@ export function LibraryWorkspace() {
           </div>
 
           <section
-            className="relative flex min-h-0 shrink-0 flex-col bg-white"
+            className={`${isCleanPreviewMode ? "hidden" : "relative flex"} min-h-0 shrink-0 flex-col bg-white`}
             style={{ width: codePanelWidth }}
           >
             <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
               {availableCodeTabs.map((tab) => {
-                const isActive = tab.id === activeCodeTab?.id;
+                const isActive = !isAssetsTabActive && tab.id === activeCodeTab?.id;
 
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveCodeTabId(tab.id)}
+                    onClick={() => {
+                      setIsAssetsTabActive(false);
+                      setActiveCodeTabId(tab.id);
+                    }}
                     className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
                       isActive
                         ? "border-black/8 bg-white text-black"
@@ -2646,9 +2690,24 @@ export function LibraryWorkspace() {
                   </button>
                 );
               })}
+
+              {hasAssetsTab ? (
+                <button
+                  type="button"
+                  onClick={() => setIsAssetsTabActive(true)}
+                  className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
+                    isAssetsTabActive
+                      ? "border-black/8 bg-white text-black"
+                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
+                  }`}
+                >
+                  assets
+                </button>
+              ) : null}
             </div>
 
-            <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+            {!isAssetsTabActive ? (
+              <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
               {isOwnedCommunityItem ? (
                 <button
                   type="button"
@@ -2695,12 +2754,12 @@ export function LibraryWorkspace() {
                 type="button"
                 onClick={toggleEditMode}
                 disabled={!hasFullSource}
-                className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
+                className={`${
                   !hasFullSource
-                    ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
+                    ? `${elevatedSecondaryButtonClassName} cursor-not-allowed text-black/35 hover:bg-[#F5F5F5] active:scale-100`
                     : isEditMode
-                      ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
+                      ? "flex items-center rounded-lg border border-black bg-black px-2 py-[5px] text-[15px] leading-[1.1] font-normal text-white shadow-[0_8px_24px_rgba(15,23,42,0.16)] transition-all duration-200"
+                      : elevatedSecondaryButtonClassName
                 }`}
               >
                 {!hasFullSource ? (
@@ -2716,38 +2775,43 @@ export function LibraryWorkspace() {
                 type="button"
                 onClick={handleCopy}
                 disabled={!hasFullSource}
-                className={`flex items-center rounded-lg border px-2 py-[5px] text-[15px] leading-[1.1] font-normal transition-all duration-200 ${
+                className={`${
                   !hasFullSource
-                    ? "cursor-not-allowed border-black/8 bg-[#F5F5F5] text-black/35"
+                    ? `${elevatedSecondaryButtonClassName} cursor-not-allowed text-black/35 hover:bg-[#F5F5F5] active:scale-100`
                     : copied
-                      ? "border-black bg-black text-white shadow-md"
-                      : "border-black/8 bg-[#F5F5F5] text-black hover:bg-white active:scale-95"
+                      ? "flex items-center rounded-lg border border-black bg-black px-2 py-[5px] text-[15px] leading-[1.1] font-normal text-white shadow-[0_8px_24px_rgba(15,23,42,0.16)] transition-all duration-200"
+                      : elevatedSecondaryButtonClassName
                 }`}
               >
                 {!hasFullSource ? "Wait" : copied ? "Copied" : "Copy"}
               </button>
-            </div>
+              </div>
+            ) : null}
 
             <div className={workspaceStyles.monacoEditorShell}>
-              <MonacoEditor
-                key={monacoModelPath}
-                beforeMount={handleEditorBeforeMount}
-                onMount={handleEditorMount}
-                height="100%"
-                defaultLanguage={activeCodeTab?.language ?? "typescript"}
-                language={activeCodeTab?.language ?? "typescript"}
-                theme={monacoThemeName}
-                path={monacoModelPath}
-                value={activeCodeValue}
-                onChange={(value) => {
-                  if (!isEditMode || !activeCodeTab) return;
-                  setEditedCodeSegments((current) => ({
-                    ...current,
-                    [activeCodeTab.id]: value ?? "",
-                  }));
-                }}
-                options={codeEditorOptions}
-              />
+              {isAssetsTabActive ? (
+                <AssetsPanel entries={selectedItem.assets ?? []} topInset={codeEditorPaddingTop} />
+              ) : (
+                <MonacoEditor
+                  key={monacoModelPath}
+                  beforeMount={handleEditorBeforeMount}
+                  onMount={handleEditorMount}
+                  height="100%"
+                  defaultLanguage={activeCodeTab?.language ?? "typescript"}
+                  language={activeCodeTab?.language ?? "typescript"}
+                  theme={monacoThemeName}
+                  path={monacoModelPath}
+                  value={activeCodeValue}
+                  onChange={(value) => {
+                    if (!isEditMode || !activeCodeTab) return;
+                    setEditedCodeSegments((current) => ({
+                      ...current,
+                      [activeCodeTab.id]: value ?? "",
+                    }));
+                  }}
+                  options={codeEditorOptions}
+                />
+              )}
             </div>
           </section>
         </div>
