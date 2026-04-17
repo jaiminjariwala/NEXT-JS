@@ -16,18 +16,19 @@ import {
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 
-const CARD_ASPECT = 1.37;
+const CARD_ASPECT = 1.58;
+const CARD_ASPECT_MOBILE = 1.55;
 const ROLE_TITLES = [
-  "Software Developer",
-  "Frontend Developer",
-  "Web Developer",
-  "Product Designer",
+  "Software Engineer",
+  "Frontend Engineer",
+  "Product Engineer",
+  "Full Stack Engineer",
 ];
 
 const BAND_VISUAL = {
-  lineWidthDesktop: 120,
-  lineWidthMobile: 100,
-  lineWidthLargeDesktop: 120,
+  lineWidthDesktop: 104,
+  lineWidthMobile: 82,
+  lineWidthLargeDesktop: 104,
   clipTopDesktopPx: 9,
   clipTopMobilePx: 9,
   tipDockOverlapDesktopPx: 0,
@@ -95,7 +96,7 @@ function Band({ cardRef, cardSize }) {
   const lineMaterial = useMemo(
     () =>
       new MeshLineMaterial({
-        color: "#111111",
+        color: "#000000",
         resolution: new THREE.Vector2(1, 1),
         sizeAttenuation: 0,
         lineWidth: BAND_VISUAL.lineWidthDesktop,
@@ -321,8 +322,8 @@ export default function HireMeLanyard() {
   const cardRef = useRef(null);
   const [roleIndex, setRoleIndex] = useState(0);
   const [cardSize, setCardSize] = useState({
-    width: 290,
-    height: Math.round(290 * CARD_ASPECT),
+    width: 260,
+    height: Math.round(260 * CARD_ASPECT),
   });
 
   useEffect(() => {
@@ -330,10 +331,13 @@ export default function HireMeLanyard() {
     if (!stage) return undefined;
 
     const updateSize = () => {
-      const width = clamp(stage.clientWidth * 0.26, 220, 320);
+      const isMobile = window.innerWidth < 768;
+      const width = isMobile
+        ? clamp(stage.clientWidth * 0.55, 210, 300)
+        : clamp(stage.clientWidth * 0.205, 178, 262);
       setCardSize({
         width,
-        height: Math.round(width * CARD_ASPECT),
+        height: Math.round(width * (isMobile ? CARD_ASPECT_MOBILE : CARD_ASPECT)),
       });
     };
 
@@ -375,9 +379,11 @@ export default function HireMeLanyard() {
         }}
       >
         <div className="hire-badge-card-inner tracking-[-0.09em]">
+          <span className="hire-badge-punch" aria-hidden="true" />
+
           <Image
             src="/my-profile-1.png"
-            alt="Prince William"
+            alt="Jaimin Jariwala"
             width={480}
             height={480}
             sizes="320px"
@@ -387,9 +393,9 @@ export default function HireMeLanyard() {
           />
 
           <h2 className="hire-badge-name">
-            Prince
+            Jaimin
             <br />
-            William
+            Jariwala
           </h2>
 
           <p className="hire-badge-role">

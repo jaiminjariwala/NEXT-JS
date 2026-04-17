@@ -4,7 +4,8 @@ export const hireMeLanyardCss = `
 .hire-r3f-lanyard {
   position: relative;
   width: var(--hire-r3f-width, 680px);
-  height: var(--hire-r3f-height, 600px);
+  height: var(--hire-r3f-height, 640px);
+  min-height: 560px;
   overflow: hidden;
   z-index: 10;
   user-select: none;
@@ -15,21 +16,27 @@ export const hireMeLanyardCss = `
 .hire-r3f-lanyard-canvas {
   position: absolute !important;
   inset: 0;
-  z-index: 1;
+  z-index: 10;
 }
 
 .hire-badge-card {
   position: absolute;
-  z-index: 2;
+  left: 0;
+  top: 0;
+  z-index: 14;
   pointer-events: none;
   padding: 8px;
   border-radius: 28px;
   background: #4a90e2;
   box-shadow: 0 24px 44px rgba(0, 0, 0, 0.12);
   overflow: visible;
+  /* Make the badge interior scale with the card itself (not the viewport)
+     so the layout stays identical at any rendered card size. */
+  container-type: inline-size;
 }
 
 .hire-badge-card-inner {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: 22px;
@@ -38,7 +45,20 @@ export const hireMeLanyardCss = `
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 5% 9% 19%;
+  padding: 22% 9% 6%;
+}
+
+/* Lanyard-style punch hole near the top, like a real ID card. */
+.hire-badge-punch {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20%;
+  height: clamp(8px, 3%, 14px);
+  border-radius: 999px;
+  background: #000000;
+  pointer-events: none;
 }
 
 .hire-badge-photo {
@@ -51,24 +71,23 @@ export const hireMeLanyardCss = `
 }
 
 .hire-badge-name {
-  margin: 0;
-  margin-top: 7%;
+  margin: 7% 0 0;
   font-family: 'Short Stack', cursive;
-  font-size: clamp(1.35rem, 2.35vw, 2.3rem);
+  font-size: 16.5cqw;
   line-height: 0.92;
   text-align: center;
   letter-spacing: 0;
   font-weight: 400;
   color: #111111;
-  -webkit-text-stroke: 1.5px #111111;
+  -webkit-text-stroke: 0.6cqw #111111;
 }
 
 .hire-badge-role {
-  margin: 10.5% 0 0;
+  margin: 13% 0 0;
   display: block;
   width: 100%;
   font-family: 'Graphik', system-ui, sans-serif;
-  font-size: clamp(1rem, 1.35vw, 1.4rem);
+  font-size: 9.1cqw;
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0;
@@ -110,6 +129,14 @@ export const hireMeLanyardCss = `
 
   .hire-badge-card-inner {
     border-radius: 18px;
+  }
+
+  .hire-badge-photo {
+    width: 94%;
+  }
+
+  .hire-badge-name {
+    letter-spacing: -0.03em;
   }
 }
 `;
