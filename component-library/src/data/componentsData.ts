@@ -6,6 +6,7 @@ import { FlipCalendar } from "@/components/library/Calendar/FlipCalendar/FlipCal
 import Card1 from "@/components/library/Card/Card1";
 import FoldingLetters from "@/components/library/Card/FoldingLetters";
 import HireMeLanyard from "@/components/library/Card/HireMeLanyard";
+import ProjectsCurl from "@/components/library/Card/ProjectsCurl";
 import SummarySwipeDeck from "@/components/library/Card/SummarySwipeDeck";
 import ContactPage from "@/components/library/Contact/ContactPage";
 import Folder1 from "@/components/library/Folder/Folder1";
@@ -17,6 +18,10 @@ import {
   hireMeLanyardCode,
   hireMeLanyardCss,
 } from "@/data/code/hireMeLanyardCode";
+import {
+  projectsCurlCode,
+  projectsCurlCss,
+} from "@/data/code/projectsCurlCode";
 import { analogClockVersions } from "@/data/versions/analogClockVersions";
 import { cardVersions } from "@/data/versions/cardVersions";
 
@@ -562,6 +567,24 @@ export default Card1;`,
     },
   },
   {
+    id: "projects-curl-1",
+    name: "Projects Page Curl",
+    category: "Card",
+    component: ProjectsCurl,
+    assets: [
+      assetFolder("images", "/images", [
+        assetFile("project-1-shot.png", "PNG image", "/images/project-1-shot.png"),
+        assetFile("page-paper.png", "PNG image", "/images/page-paper.png"),
+        assetFile("selotape.png", "PNG image", "/images/selotape.png"),
+        assetFile("safety-pin.png", "PNG image", "/images/safety-pin.png"),
+      ]),
+    ],
+    code: {
+      tsx: projectsCurlCode,
+      css: projectsCurlCss,
+    },
+  },
+  {
     id: "summary-swipe-deck-1",
     name: "Summary Swipe Deck",
     category: "Card",
@@ -888,6 +911,7 @@ export default Drawer1;`,
 const showcasePriorityOrder = [
   "folding-letters-1",
   "hire-me-lanyard-1",
+  "projects-curl-1",
   "contact-page-1",
   "figma-canvas",
 ];

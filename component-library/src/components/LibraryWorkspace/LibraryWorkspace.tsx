@@ -620,6 +620,7 @@ function getPreviewScale(itemId: string, previewPanelWidth = 0): number {
       return Math.min(Math.max((previewPanelWidth - 48) / 480, 0.62), 1.35);
     case "contact-page-1":
     case "hire-me-lanyard-1":
+    case "projects-curl-1":
       return 1;
     default:
       return 0.7;
@@ -669,14 +670,30 @@ function getPreviewFrameStyle(itemId: string): React.CSSProperties | undefined {
     case "hire-me-lanyard-1":
       return {
         display: "flex",
-        alignItems: "center",
+        alignItems: "stretch",
         justifyContent: "center",
-        width: 560,
-        height: 600,
-        borderRadius: 28,
+        alignSelf: "stretch",
+        width: "100%",
+        minHeight: "100%",
+        padding: 0,
+        borderRadius: 0,
         background: "#ffffff",
         boxSizing: "border-box",
-        ["--hire-r3f-width" as string]: "560px",
+        ["--hire-r3f-width" as string]: "100%",
+        ["--hire-r3f-height" as string]: "100%",
+      };
+    case "projects-curl-1":
+      return {
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "center",
+        alignSelf: "stretch",
+        width: "100%",
+        minHeight: "100%",
+        padding: 0,
+        borderRadius: 0,
+        background: "#ffffff",
+        boxSizing: "border-box",
       };
     default:
       return undefined;
@@ -886,6 +903,12 @@ export function LibraryWorkspace() {
           ["--hire-r3f-width" as string]: "100%",
           ["--hire-r3f-height" as string]: "100%",
         } as React.CSSProperties)
+      : selectedItem.id === "projects-curl-1"
+        ? ({
+            ["--preview-scale" as string]: 1,
+            ["--preview-content-width" as string]: "100%",
+            ["--preview-content-height" as string]: "100%",
+          } as React.CSSProperties)
       : selectedItem.id === "claude-excel-modal-1"
         ? ({
             ["--preview-scale" as string]: 1,
