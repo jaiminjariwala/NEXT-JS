@@ -100,7 +100,6 @@ const copernicusFontAssets = [
 ];
 
 const contactCardAssets = [
-  assetFile("hand-cursor.png", "PNG image", "/hand-cursor.png"),
   assetFile("paper-clip.png", "PNG image", "/paper-clip.png"),
 ];
 
