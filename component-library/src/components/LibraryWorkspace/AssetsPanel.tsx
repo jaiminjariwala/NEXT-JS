@@ -9,6 +9,10 @@ type AssetsPanelProps = {
   rootLabel?: string;
 };
 
+function isImageAsset(name: string) {
+  return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(name);
+}
+
 function sortEntries(entries: ShowcaseAssetEntry[]) {
   return [...entries].sort((left, right) => {
     if (left.type !== right.type) {
@@ -17,6 +21,47 @@ function sortEntries(entries: ShowcaseAssetEntry[]) {
 
     return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
   });
+}
+
+function collectFiles(entries: ShowcaseAssetEntry[]): ShowcaseAssetEntry[] {
+  const files: ShowcaseAssetEntry[] = [];
+  const walk = (list: ShowcaseAssetEntry[]) => {
+    list.forEach((entry) => {
+      if (entry.type === "folder") {
+        walk(entry.children ?? []);
+      } else {
+        files.push(entry);
+      }
+    });
+  };
+  walk(entries);
+  return files;
+}
+
+async function downloadFile(entry: ShowcaseAssetEntry) {
+  try {
+    const response = await fetch(entry.path);
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = entry.name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    // Fallback: open the asset directly so the user can still save it.
+    const anchor = document.createElement("a");
+    anchor.href = entry.path;
+    anchor.download = entry.name;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
 }
 
 function GlassFolderGlyph() {
@@ -68,6 +113,27 @@ function FileGlyph({ entry }: { entry: ShowcaseAssetEntry }) {
   );
 }
 
+function DownloadIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="13"
+      height="13"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M8 2v8" />
+      <path d="M4.5 7 8 10.5 11.5 7" />
+      <path d="M3 13.5h10" />
+    </svg>
+  );
+}
+
 export function AssetsPanel({
   entries,
   topInset = 72,
@@ -75,6 +141,7 @@ export function AssetsPanel({
 }: AssetsPanelProps) {
   const [folderStack, setFolderStack] = useState<ShowcaseAssetEntry[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   useEffect(() => {
     setFolderStack([]);
@@ -89,6 +156,8 @@ export function AssetsPanel({
     return sortEntries(activeEntries);
   }, [entries, folderStack]);
 
+  const allFiles = useMemo(() => collectFiles(entries), [entries]);
+
   const breadcrumbs = useMemo(() => {
     const fileEntry = currentFolderEntries.find((entry) => entry.path === selectedFilePath);
     return [
@@ -100,69 +169,150 @@ export function AssetsPanel({
       })),
       ...(fileEntry
         ? [
-            {
-              key: fileEntry.path,
-              label: fileEntry.name,
-              folderDepth: -1,
-            },
-          ]
+          {
+            key: fileEntry.path,
+            label: fileEntry.name,
+            folderDepth: -1,
+          },
+        ]
         : []),
     ];
   }, [currentFolderEntries, folderStack, rootLabel, selectedFilePath]);
 
+  const handleDownloadAll = async () => {
+    if (isDownloadingAll || !allFiles.length) return;
+    setIsDownloadingAll(true);
+    try {
+      for (const file of allFiles) {
+        await downloadFile(file);
+        // Small gap so browsers don't drop back-to-back downloads.
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-white" style={{ paddingTop: topInset }}>
-      <div className="min-h-0 flex-1 px-4 pb-4">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] border border-black/8 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-          <div className="grid grid-cols-[minmax(0,1fr)_190px] border-b border-black/8 bg-[#fafafa] px-4 py-2 text-[12px] font-medium leading-none text-black/48">
-            <div>Name</div>
-            <div>Kind</div>
+      <div className="flex items-center justify-between gap-3 px-4 pb-2">
+        <span className="text-[12px] leading-none text-black/45">
+          {allFiles.length} {allFiles.length === 1 ? "file" : "files"}
+        </span>
+        <button
+          type="button"
+          onClick={handleDownloadAll}
+          disabled={isDownloadingAll || !allFiles.length}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 bg-white px-2.5 py-[6px] text-[12.5px] font-medium leading-none text-black/72 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-colors hover:bg-[#f5f6f8] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <DownloadIcon />
+          {isDownloadingAll ? "Downloading…" : "Download all"}
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="grid grid-cols-[minmax(0,1fr)_180px_44px] items-center border-b border-black/10 bg-white px-4 py-[7px] text-[12px] font-medium leading-none text-black/50">
+          <div className="flex items-center gap-1">
+            Name
+            <svg viewBox="0 0 12 12" width="10" height="10" className="text-black/35" aria-hidden="true">
+              <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
+          <div>Kind</div>
+          <div />
+        </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {currentFolderEntries.length ? (
-              currentFolderEntries.map((entry) => {
-                const isSelected = selectedFilePath === entry.path;
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {currentFolderEntries.length ? (
+            currentFolderEntries.map((entry, index) => {
+              const isSelected = selectedFilePath === entry.path;
+              const pillBg = isSelected
+                ? "bg-[#f5f5f5] border border-black/[0.08]"
+                : index % 2 === 1
+                  ? "bg-[rgb(244,245,245)]"
+                  : "";
 
-                return (
-                  <button
-                    key={entry.path}
-                    type="button"
-                    onClick={() => {
+              return (
+                <div
+                  key={entry.path}
+                  className="group relative grid w-full grid-cols-[minmax(0,1fr)_180px_44px] items-center gap-3 px-4 py-[2px] text-left"
+                  onClick={() => {
+                    if (entry.type === "folder") {
+                      setFolderStack((current) => [...current, entry]);
+                      setSelectedFilePath(null);
+                      return;
+                    }
+                    setSelectedFilePath(entry.path);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
                       if (entry.type === "folder") {
                         setFolderStack((current) => [...current, entry]);
                         setSelectedFilePath(null);
-                        return;
+                      } else {
+                        setSelectedFilePath(entry.path);
                       }
-
-                      setSelectedFilePath(entry.path);
-                    }}
-                    className={`grid w-full grid-cols-[minmax(0,1fr)_190px] items-center gap-4 border-b border-black/6 px-4 py-[9px] text-left transition-colors ${
-                      isSelected ? "bg-[#eef4ff]" : "hover:bg-[#f7f8fa]"
-                    }`}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      {entry.type === "folder" ? (
-                        <GlassFolderGlyph />
-                      ) : (
-                        <FileGlyph entry={entry} />
-                      )}
-                      <span className="truncate text-[14px] leading-[1.2] text-black/88">
-                        {entry.name}
+                    }
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute inset-y-[1px] left-2 right-2 rounded-[8px] ${pillBg}`}
+                  />
+                  <div className="relative z-[1] flex min-w-0 items-center gap-3">
+                    {entry.type === "folder" ? (
+                      <GlassFolderGlyph />
+                    ) : isImageAsset(entry.name) ? (
+                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center overflow-hidden rounded-[4px] border border-black/10 bg-white">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={entry.path}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="h-full w-full object-cover"
+                        />
                       </span>
-                    </div>
-                    <div className="truncate text-[13px] leading-[1.2] text-black/48">
-                      {entry.kind}
-                    </div>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="flex h-full min-h-[180px] items-center justify-center px-6 text-center text-[14px] leading-[1.5] text-black/45">
-                No assets in this folder.
-              </div>
-            )}
-          </div>
+                    ) : (
+                      <FileGlyph entry={entry} />
+                    )}
+                    <span
+                      className="truncate text-[13.5px] leading-[1.2] text-black/88"
+                    >
+                      {entry.name}
+                    </span>
+                  </div>
+                  <div
+                    className="relative z-[1] truncate text-[12.5px] leading-[1.2] text-black/45"
+                  >
+                    {entry.kind}
+                  </div>
+                  <div className="relative z-[1] flex justify-end">
+                    {entry.type === "file" ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void downloadFile(entry);
+                        }}
+                        aria-label={`Download ${entry.name}`}
+                        className={`flex h-[22px] w-[22px] items-center justify-center rounded-md text-black/55 opacity-0 transition-opacity hover:bg-black/8 group-hover:opacity-100 ${isSelected ? "opacity-100" : ""}`}
+                      >
+                        <DownloadIcon />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex h-full min-h-[180px] items-center justify-center px-6 text-center text-[14px] leading-[1.5] text-black/45">
+              No assets in this folder.
+            </div>
+          )}
         </div>
       </div>
 
@@ -185,11 +335,10 @@ export function AssetsPanel({
                     setFolderStack((current) => current.slice(0, crumb.folderDepth));
                     setSelectedFilePath(null);
                   }}
-                  className={`rounded-md px-[6px] py-[3px] transition-colors ${
-                    isFileCrumb
-                      ? "cursor-default bg-white text-black/72 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
-                      : "hover:bg-white hover:text-black/72"
-                  }`}
+                  className={`rounded-md px-[6px] py-[3px] transition-colors ${isFileCrumb
+                    ? "cursor-default bg-white text-black/72 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+                    : "hover:bg-white hover:text-black/72"
+                    }`}
                 >
                   {crumb.label}
                 </button>
@@ -198,6 +347,6 @@ export function AssetsPanel({
           })}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
