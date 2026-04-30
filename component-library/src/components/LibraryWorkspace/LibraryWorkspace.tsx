@@ -1673,7 +1673,14 @@ export function LibraryWorkspace() {
   };
 
   const handleOAuthSignIn = async (provider: "github") => {
-    if (!supabaseClient) return;
+    if (!supabaseClient) {
+      window.alert(
+        "GitHub sign-in isn't configured yet. Add NEXT_PUBLIC_SUPABASE_URL and " +
+          "NEXT_PUBLIC_SUPABASE_ANON_KEY to a .env.local file (and enable the " +
+          "GitHub provider in your Supabase project), then restart the dev server."
+      );
+      return;
+    }
 
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider,
